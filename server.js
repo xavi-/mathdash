@@ -66,8 +66,8 @@ function Game() {
     this.answered = function(sessionId, answer) {
         var player = players[sessionId];
         if(player.questions.isCorrect(answer)) {
-            this.emit("correct-answer", player, answer);
             player.score += 10;
+            this.emit("correct-answer", player, answer);
             player.questions.next();
         } else {
             this.emit("incorrect-answer", player, answer);
@@ -106,7 +106,7 @@ var clients = {}, games = [];
 
 var findOpenGame = (function() {
     function gameStarted(game) {
-        game.players.forEach(function(player) {
+        this.players.forEach(function(player) {
             player.client.send({ "game-started": game.started });
         });
     }
@@ -115,23 +115,32 @@ var findOpenGame = (function() {
         player.client.send({ "new-question": question });
     }
 
-    function correctAnswer(player, answer) {
-        player.client.send({ "correct-answer": answer, "score": player.score; });
-        game.players.forEach(function(player) {
-            player.client.send({ "game-started": game.started });
-        });
-    }
-
     function incorrectAnswer(player, answer) {
         player.client.send({ "incorrect-answer": answer });
     }
 
+    function correctAnswer(player, answer) {
+        player.client.send({ "correct-answer": answer, "score": player.score });
+        this.players.forEach(function(p) {
+            if(p.client.sessionId === player.client.sessionId) { return; }
+            p.client.send({ "score-update": { "sessionId": player.client.sessionId, "score": player.score } });
+        });
+    }
+
     function playerAdded(player) {
-        player.client.send({ "player-added": player.client.sessionId });
+        player.client.send({ "game-joined": true });
+        this.players.forEach(function(p) {
+            if(p.client.sessionId === player.client.sessionId) { return; }
+            p.client.send({ "player-added": player.client.sessionId });
+        });
     }
 
     function playerRemoved(player) {
-        player.client.send({ "player-removed": player.client.sessionId });
+        player.client.send({ "game-left": true });
+        this.players.forEach(function(p) {
+            if(p.client.sessionId === player.client.sessionId) { return; }  
+            p.client.send({ "player-removed": player.client.sessionId });
+        });
     }
 
     return function findOpenGame() {    
