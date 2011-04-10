@@ -1,0 +1,37 @@
+<html>
+<head>
+    <link rel="stylesheet" class="theme-link" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/themes/excite-bike/jquery-ui.css" type="text/css" media="screen" /> 
+</head>
+<body>
+<h1>Welcome to MathDash!</h1>
+<a class="join-game" href="#">Join Game</a>
+<div>
+    <span id="problem">2 * 12</span><input id="answer" type="text" />
+</div>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/jquery-ui.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    var socket = new io.Socket();
+    socket.connect();
+    socket.on("connect", function(){ console.log("connected"); });
+    socket.on("disconnect", function(){ $("<div>You just got dis conuct bro</div>").dialog(); });
+    socket.on("message", function(data){
+        console.dir(data);
+    });
+    
+    $(".join-game").click(function(e) {
+        socket.send({ "join-game": true });
+        e.preventDefault();
+    });
+    
+    $("#answer").keypress(function(e) {
+        if(e.which !== $.ui.keyCode.ENTER) { return;  }
+        
+        socket.send({ answer: $(this).val() });
+        
+        e.preventDefault();
+    });
+</script>
+</body>
+</html>
