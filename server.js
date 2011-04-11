@@ -120,18 +120,20 @@ var findOpenGame = (function() {
     }
 
     function correctAnswer(player, answer) {
-        player.client.send({ "correct-answer": answer, "score": player.score });
+        player.client.send({ "correct-answer": { "answer": answer, "score": player.score } });
         this.players.forEach(function(p) {
             if(p.client.sessionId === player.client.sessionId) { return; }
-            p.client.send({ "score-update": { "sessionId": player.client.sessionId, "score": player.score } });
+            p.client.send({ "score-update": { "id": player.client.sessionId, "score": player.score } });
         });
     }
 
     function playerAdded(player) {
-        player.client.send({ "game-joined": true });
+        var players = {};
+        this.players.forEach(function(player) { players[player.client.sessionId] = player.score; });
+        player.client.send({ "game-joined": { "players": players } });
         this.players.forEach(function(p) {
             if(p.client.sessionId === player.client.sessionId) { return; }
-            p.client.send({ "player-added": player.client.sessionId });
+            p.client.send({ "player-added": { "id": player.client.sessionId, "score": player.score } });
         });
     }
 
@@ -176,11 +178,12 @@ socket.on('connection', function(client){
             curGame = findOpenGame();
             curGame.addPlayer(client);
         }
-        
         if("start-game" in data) {
             curGame.start();
         }
-        
+        if("leave-game" in data) {
+            curGame.removePlayer(client.sessionId);
+        }
         if("answer" in data) {
             curGame.answered(client.sessionId, data["answer"]);
         }

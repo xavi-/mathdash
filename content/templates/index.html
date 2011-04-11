@@ -1,27 +1,118 @@
+<!DOCTYPE html>
 <html>
 <head>
     <link rel="stylesheet" class="theme-link" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/themes/excite-bike/jquery-ui.css" type="text/css" media="screen" /> 
+    <style>
+        .answer-correct { background: green; }
+        .answer-incorrect { background: red; }
+        
+        #problem-container,
+        .join-game, .start-game, .leave-game { display: none; }
+    </style>
 </head>
 <body>
 <h1>Welcome to MathDash!</h1>
 <a class="join-game" href="#">Join Game</a>
+<a class="start-game" href="#">Start Game</a>
+<a class="leave-game" href="#">Leave Game</a>
 <div>
-    <span id="problem">2 * 12</span><input id="answer" type="text" />
+    <div id="problem-container">
+        <div class="score">0</div>
+        <span id="problem">2 * 12</span><input id="answer" type="text" />
+    </div>
+    <ul id="opponents"></ul>
 </div>
+<script type="text/javascript" src="http://ajax.cdnjs.com/ajax/libs/json2/20110223/json2.js" defer="true" async="true"></script>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/jquery-ui.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
     var socket = new io.Socket();
     socket.connect();
-    socket.on("connect", function(){ console.log("connected"); });
-    socket.on("disconnect", function(){ $("<div>You just got dis conuct bro</div>").dialog(); });
+    socket.on("connect", function() {
+        console.log("connected");
+        $(".join-game").show();
+        $(".start-game, .leave-game").hide();
+    });
+    socket.on("disconnect", function() {
+        $("<div>You just got dis conuct bro</div>").dialog();
+        $(".join-game, .start-game, .leave-game").hide();
+    });
     socket.on("message", function(data){
-        console.dir(data);
+        console.dir && console.dir(data);
+        if("game-joined" in data) {
+            var players = data["game-joined"].players;
+            for(var id in players) {
+                $("#opponents").append(
+                    $("<li><span class='opponent-name'/>: <span class='opponent-score'/></li>")
+                        .attr("data-id", id)
+                        .find(".opponent-name").text(id).end()
+                        .find(".opponent-score").text(players[id]).end()
+                );
+            }
+            $(".start-game").show();
+            $(".join-game, .leave-game").hide();
+        }
+        if("game-started" in data) {
+            $(".leave-game, #problem-container").show();
+            $(".join-game, .start-game").hide();
+            $("#answer").focus();
+        }
+        if("game-left" in data) {
+            $("<div>You've left the game</div>").dialog();
+            $(".join-game").show();
+            $("#problem-container, .start-game, .leave-game").hide();
+            $("#opponents").empty();
+        }
+        if("player-added" in data) {
+            $("#opponents").append(
+                $("<li><span class='opponent-name'/>: <span class='opponent-score'/></li>")
+                    .attr("data-id", data["player-added"].id)
+                    .find(".opponent-name").text(data["player-added"].id).end()
+                    .find(".opponent-score").text(data["player-added"].score).end()
+            );
+        }
+        if("player-removed" in data) {
+            $("#opponents").find("[data-id=" + data["player-removed"] + "]").remove();
+        }
+        if("new-question" in data) {
+            $("#problem").text(data["new-question"]).removeClass("answer-incorrect answer-correct");
+        }
+        if("correct-answer" in data) {
+            if($("#answer").val() == data["correct-answer"].answer) {
+                $("#problem").addClass("answer-correct").removeClass("answer-incorrect");
+                $(".score, #opponents [data-id=" + socket.transport.sessionid + "] .opponent-score")
+                    .text(data["correct-answer"].score);
+                $("#answer").val("");
+            } else {
+                console.log("WTF: " + $("#answer").val() + "; " + data["correct-answer"].answer);
+            }
+        }
+        if("incorrect-answer" in data) {
+            if($("#answer").val() == data["correct-answer"]) {
+                $("#problem").addClass("answer-incorrect").removeClass("answer-correct");
+            } else {
+                console.log("WTF: " + $("#answer").val() + "; " + data["correct-answer"]);
+            }
+        }
+        if("score-update" in data) {
+            var info = data["score-update"];
+            $("#opponents").find("[data-id=" + info.id + "] .opponent-score").text(info.score);
+        }
     });
     
     $(".join-game").click(function(e) {
         socket.send({ "join-game": true });
+        e.preventDefault();
+    });
+    
+    $(".start-game").click(function(e) {
+        socket.send({ "start-game": true });
+        e.preventDefault();
+    });
+    
+    $(".leave-game").click(function(e) {
+        socket.send({ "leave-game": true });
         e.preventDefault();
     });
     
