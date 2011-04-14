@@ -27,12 +27,12 @@
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/jquery-ui.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
+    var userId = "(: user-id :)";
     var socket = new io.Socket();
     socket.connect();
     socket.on("connect", function() {
         console.log("connected");
-        $(".join-game").show();
-        $(".start-game, .leave-game").hide();
+        socket.send({ setup: { "user-id": userId } });
     });
     socket.on("disconnect", function() {
         $("<div>You just got dis conuct bro</div>").dialog();
@@ -40,6 +40,12 @@
     });
     socket.on("message", function(data){
         console.dir && console.dir(data);
+        
+        if("setup-done" in data) {
+            $(".join-game").show();
+            $(".start-game, .leave-game").hide();
+        }
+        
         if("game-joined" in data) {
             var players = data["game-joined"].players;
             for(var id in players) {
@@ -81,7 +87,7 @@
         if("correct-answer" in data) {
             if($("#answer").val() == data["correct-answer"].answer) {
                 $("#problem").addClass("answer-correct").removeClass("answer-incorrect");
-                $(".score, #opponents [data-id=" + socket.transport.sessionid + "] .opponent-score")
+                $(".score, #opponents [data-id=" + userId + "] .opponent-score")
                     .text(data["correct-answer"].score);
                 $("#answer").val("");
             } else {
@@ -89,7 +95,7 @@
             }
         }
         if("incorrect-answer" in data) {
-            if($("#answer").val() == data["correct-answer"]) {
+            if($("#answer").val() == data["incorrect-answer"]) {
                 $("#problem").addClass("answer-incorrect").removeClass("answer-correct");
             } else {
                 console.log("WTF: " + $("#answer").val() + "; " + data["correct-answer"]);

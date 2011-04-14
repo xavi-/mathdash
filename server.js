@@ -4,10 +4,15 @@ var util = require("util");
 var io = require("socket.io");
 var bee = require("beeline");
 var bind = require("bind");
+var Cookies = require("cookies");
 
 var route = bee.route({
     "/ /index.html": function(req, res) {
-        bind.toFile("./content/templates/index.html", {}, function(data) {
+        var cookies = new Cookies(req, res);
+        var userId = cookies.get("user-id") || Math.random().toString().substr(2);
+        
+        cookies.set("user-id", userId);
+        bind.toFile("./content/templates/index.html", { "user-id": userId }, function(data) {
             res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
             res.end(data);
         });
@@ -63,8 +68,8 @@ function Game() {
         }
     };
     
-    this.answered = function(sessionId, answer) {
-        var player = players[sessionId];
+    this.answered = function(userId, answer) {
+        var player = players[userId];
         if(player.questions.isCorrect(answer)) {
             player.score += 10;
             this.emit("correct-answer", player, answer);
@@ -74,23 +79,23 @@ function Game() {
         }
     };
     
-    this.addPlayer = function(client) {
-        if(client.sessionId in players) { return; }
+    this.addPlayer = function(userId, client) {
+        if(userId in players) { return; }
         
-        var player = { client: client, score: 0, questions: new Questions(client) };
+        var player = { userId: userId, client: client, score: 0, questions: new Questions(client) };
         player.questions
             .on("new-question", function(question) { self.emit("new-question", player, question); });
-        players[client.sessionId] = player;
+        players[userId] = player;
         
         self.emit("player-added", player);
     };
     
-    this.removePlayer = function(sessionId) {
-        if(!(sessionId in players)) { return; }
+    this.removePlayer = function(userId) {
+        if(!(userId in players)) { return; }
         
-        var player = players[sessionId];
-        players[sessionId] = null;
-        delete players[sessionId];
+        var player = players[userId];
+        players[userId] = null;
+        delete players[userId];
         
         self.emit("player-removed", player)
     };
@@ -122,30 +127,30 @@ var findOpenGame = (function() {
     function correctAnswer(player, answer) {
         player.client.send({ "correct-answer": { "answer": answer, "score": player.score } });
         this.players.forEach(function(p) {
-            if(p.client.sessionId === player.client.sessionId) { return; }
-            p.client.send({ "score-update": { "id": player.client.sessionId, "score": player.score } });
+            if(p.userId === player.userId) { return; }
+            p.client.send({ "score-update": { "id": player.userId, "score": player.score } });
         });
     }
 
     function playerAdded(player) {
         var players = {};
-        this.players.forEach(function(player) { players[player.client.sessionId] = player.score; });
+        this.players.forEach(function(player) { players[player.userId] = player.score; });
         player.client.send({ "game-joined": { "players": players } });
         this.players.forEach(function(p) {
-            if(p.client.sessionId === player.client.sessionId) { return; }
-            p.client.send({ "player-added": { "id": player.client.sessionId, "score": player.score } });
+            if(p.userId === player.userId) { return; }
+            p.client.send({ "player-added": { "id": player.userId, "score": player.score } });
         });
     }
 
     function playerRemoved(player) {
         player.client.send({ "game-left": true });
         this.players.forEach(function(p) {
-            if(p.client.sessionId === player.client.sessionId) { return; }  
-            p.client.send({ "player-removed": player.client.sessionId });
+            if(p.userId === player.userId) { return; }  
+            p.client.send({ "player-removed": player.userId });
         });
     }
 
-    return function findOpenGame() {    
+    return function findOpenGame() {
         var openGame = games.filter(function(game) { return !game.started; })[0];
         if(!openGame) {
             openGame = new Game();
@@ -165,32 +170,36 @@ var findOpenGame = (function() {
 
 var socket = io.listen(server);
 socket.on('connection', function(client){
-    var curGame;
+    var curGame, userId;
     
     console.log("A new client!!: " + client.sessionId);
-    clients[client.sessionId] = client;
     
     client.on('message', function(data){
         console.log("got message...: " + JSON.stringify(data));
         
+        if("setup" in data) {
+            userId = data["setup"]["user-id"];
+            clients[userId] = client;
+            client.send({ "setup-done": true });
+        }
         if("join-game" in data) {
-            if(curGame) { curGame.removePlayer(client.sessionId); }
+            if(curGame) { curGame.removePlayer(userId); }
             curGame = findOpenGame();
-            curGame.addPlayer(client);
+            curGame.addPlayer(userId, client);
         }
         if("start-game" in data) {
             curGame.start();
         }
         if("leave-game" in data) {
-            curGame.removePlayer(client.sessionId);
+            curGame.removePlayer(userId);
         }
         if("answer" in data) {
-            curGame.answered(client.sessionId, data["answer"]);
+            curGame.answered(userId, data["answer"]);
         }
     });
     client.on('disconnect', function(){
-        clients[client.sessionId] = null;
-        delete clients[client.sessionId];
+        clients[userId] = null;
+        delete clients[userId];
     });
 });
 
