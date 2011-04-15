@@ -35,8 +35,9 @@
         socket.send({ setup: { "user-id": userId } });
     });
     socket.on("disconnect", function() {
-        $("<div>You just got dis conuct bro</div>").dialog();
+        $("<div class='disconnect-dialog'>You just got dis conuct bro</div>").dialog();
         $(".join-game, .start-game, .leave-game").hide();
+        setTimeout(function() { socket.connect(); }, 1000);
     });
     socket.on("message", function(data){
         console.dir && console.dir(data);
@@ -44,17 +45,24 @@
         if("setup-done" in data) {
             $(".join-game").show();
             $(".start-game, .leave-game").hide();
+            $(".disconnect-dialog").dialog("destroy");
         }
         
         if("game-joined" in data) {
             var players = data["game-joined"].players;
             for(var id in players) {
-                $("#opponents").append(
-                    $("<li><span class='opponent-name'/>: <span class='opponent-score'/></li>")
-                        .attr("data-id", id)
-                        .find(".opponent-name").text(id).end()
-                        .find(".opponent-score").text(players[id]).end()
-                );
+                if(id === userId) { $(".score").text(players[id]); }
+                
+                if($("#opponents").find("[data-id=" + id + "]").length !== 0) {
+                    $("#opponents").find("[data-id=" + id + "] .opponent-score").text(players[id]);
+                } else {
+                    $("#opponents").append(
+                        $("<li><span class='opponent-name'/>: <span class='opponent-score'/></li>")
+                            .attr("data-id", id)
+                            .find(".opponent-name").text(id).end()
+                            .find(".opponent-score").text(players[id]).end()
+                    );
+                }
             }
             $(".start-game").show();
             $(".join-game, .leave-game").hide();

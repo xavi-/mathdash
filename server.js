@@ -100,6 +100,10 @@ function Game() {
         self.emit("player-removed", player)
     };
     
+    this.getPlayer = function(userId) {
+        return players[userId];
+    }
+    
     this.__defineGetter__("players", function() {
         return Object.keys(players).map(function(key) { return players[key]; });
     });
@@ -168,23 +172,53 @@ var findOpenGame = (function() {
     };
 })();
 
+function reconnectLogic(userId, client, msg) {
+    console.log("Force reconnect: " + userId);
+    
+    if(clients[userId].disconnectTimer) { clearTimeout(clients[userId].disconnectTimer); }
+    clients[userId].disconnectTimer = null;
+    
+    msg["reconnected"] = true;
+    
+    var curGame = clients[userId].curGame;
+    if(curGame) {
+        curGame.getPlayer(userId).client = client;
+        
+        var players = {};
+        curGame.players.forEach(function(player) { players[player.userId] = player.score; });
+        msg["game-joined"] = { players: players };
+        if(curGame.started) {
+            msg["game-started"] = true;
+            msg["new-question"] = curGame.getPlayer(userId).questions.current();
+        }
+        if(curGame.ended) { msg["game-ended"] = true; }
+    }
+}
+
 var socket = io.listen(server);
 socket.on('connection', function(client){
     var curGame, userId;
     
-    console.log("A new client!!: " + client.sessionId);
+    console.log("A new client!!: sessionId: " + client.sessionId + "; userId: " + userId);
     
     client.on('message', function(data){
-        console.log("got message...: " + JSON.stringify(data));
+        console.log("got message...: userId: " + userId + "; data: " + JSON.stringify(data));
         
         if("setup" in data) {
+            var msg = { "setup-done": true };
             userId = data["setup"]["user-id"];
-            clients[userId] = client;
-            client.send({ "setup-done": true });
+            
+            if(!clients[userId]) { clients[userId] = { curGame: null, client: client }; }
+            else {
+                reconnectLogic(userId, client, msg);
+                curGame = clients[userId].curGame;
+            }
+            
+            client.send(msg);
         }
         if("join-game" in data) {
             if(curGame) { curGame.removePlayer(userId); }
-            curGame = findOpenGame();
+            clients[userId].curGame = curGame = findOpenGame();
             curGame.addPlayer(userId, client);
         }
         if("start-game" in data) {
@@ -198,8 +232,17 @@ socket.on('connection', function(client){
         }
     });
     client.on('disconnect', function(){
-        clients[userId] = null;
-        delete clients[userId];
+        if(!userId) { return; }
+        if(clients[userId].client.sessionId !== client.sessionId) { return; }
+        
+        clients[userId].disconnectTimer = setTimeout(function() {
+            console.log("Really disconnected: " + userId);
+            if(curGame) { curGame.removePlayer(userId); }
+            clients[userId] = null;
+            delete clients[userId];
+        }, 10000);
+        
+        console.log("About to disconnect: " + userId);
     });
 });
 
