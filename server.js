@@ -1,4 +1,6 @@
 var http = require("http");
+var net = require("net");
+var repl = require("repl");
 var event = require("events");
 var util = require("util");
 var io = require("socket.io");
@@ -248,3 +250,11 @@ socket.on('connection', function(client){
 
 server.listen(8007);
 console.log("Listening on port 8007");
+
+
+net.createServer(function (socket) {
+  var r = repl.start("mathdash> ", socket);
+  r.context.clients = clients;
+  r.context.games = games;
+  r.context.socket = socket;
+}).listen("/tmp/mathdash-repl-sock");
