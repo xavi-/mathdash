@@ -179,6 +179,7 @@ function reconnectLogic(userId, client, msg) {
     
     if(clients[userId].disconnectTimer) { clearTimeout(clients[userId].disconnectTimer); }
     clients[userId].disconnectTimer = null;
+    clients[userId].client = client;
     
     msg["reconnected"] = true;
     
@@ -228,6 +229,7 @@ socket.on('connection', function(client){
         }
         if("leave-game" in data) {
             curGame.removePlayer(userId);
+            clients[userId].curGame = curGame = null;
         }
         if("answer" in data) {
             curGame.answered(userId, data["answer"]);
@@ -236,6 +238,7 @@ socket.on('connection', function(client){
     client.on('disconnect', function(){
         if(!userId) { return; }
         if(clients[userId].client.sessionId !== client.sessionId) { return; }
+        if(clients[userId].client.connected) { return; }
         
         clients[userId].disconnectTimer = setTimeout(function() {
             console.log("Really disconnected: " + userId);
