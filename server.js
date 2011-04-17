@@ -18,7 +18,8 @@ var route = bee.route({
             res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
             res.end(data);
         });
-    }
+    },
+    "/libraries/pie.htc": bee.staticFileHandler("./libraries/PIE/PIE.htc", "text/x-component")
 });
 
 var server = http.createServer(route);

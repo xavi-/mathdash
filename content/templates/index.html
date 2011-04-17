@@ -7,6 +7,7 @@
             max-width: 958px;
             margin: 0 auto;
             border: 1px solid black;
+            font-family: "quatro-1", "quatro-2","Arial Black", Verdana, "Droid Sans", sans-serif;
         }
         
         #opponents {
@@ -32,6 +33,30 @@
             background: green;
         }
         
+        #problem-container {
+            font-size: 2em;
+            text-align: center;
+            padding: 1em;
+            text-rendering: optimizelegibility;
+        }
+        
+        #problem-container input {
+            font-size: 1em;
+            font-family: inherit;
+            width: 3em;
+            border: none;
+            -moz-box-shadow: 0 0 5px 5px gray;
+            box-shadow: 0 0 5px 5px gray;
+            text-align: center;
+            behavior: url(/libraries/pie.htc);
+        }
+        
+        #problem-container input:focus {
+            -moz-box-shadow: 0 0 5px 5px green;
+            box-shadow: 0 0 5px 5px green;
+            behavior: url(/libraries/pie.htc);
+        }
+        
         .answer-correct { background: green; }
         .answer-incorrect { background: red; }
     </style>
@@ -55,7 +80,7 @@
             </div></li>
         </ul>
         <div id="problem-container">
-            <span id="problem">2 * 12</span> = <input id="answer" type="text"></input>
+            <span id="problem">?? + ??</span> = <input id="answer" type="text" autocomplete="off" />
         </div>
     </div>
     <div class="button-container">
@@ -119,13 +144,14 @@
             $(".join-game").hide();
         }
         if("game-started" in data) {
-            $(".leave-game, #problem-container").show();
+            $(".leave-game").show();
             $(".join-game, .start-game").hide();
             $("#answer").focus();
         }
         if("game-left" in data) {
             $(".join-game").show();
-            $("#problem-container, .start-game, .leave-game").hide();
+            $(".start-game, .leave-game").hide();
+            $("#problem").text("?? + ??");
             cars.reset();
         }
         if("player-added" in data) {
