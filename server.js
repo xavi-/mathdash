@@ -14,7 +14,7 @@ var route = bee.route({
         var userId = cookies.get("user-id") || Math.random().toString().substr(2);
         
         cookies.set("user-id", userId);
-        bind.toFile("./content/templates/index.html", { "user-id": userId }, function(data) {
+        bind.toFile("./content/templates/index.html", { "user-id": userId, "total-score": 100 }, function(data) {
             res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
             res.end(data);
         });
@@ -140,11 +140,13 @@ var findOpenGame = (function() {
 
     function playerAdded(player) {
         var players = {};
-        this.players.forEach(function(player) { players[player.userId] = player.score; });
+        this.players.forEach(function(player) {
+            players[player.userId] = { "score": player.score, "name": "foowoo" };
+        });
         player.client.send({ "game-joined": { "players": players } });
         this.players.forEach(function(p) {
             if(p.userId === player.userId) { return; }
-            p.client.send({ "player-added": { "id": player.userId, "score": player.score } });
+            p.client.send({ "player-added": { "id": player.userId, "score": player.score, "name": "foowoo" } });
         });
     }
 
@@ -188,7 +190,9 @@ function reconnectLogic(userId, client, msg) {
         curGame.getPlayer(userId).client = client;
         
         var players = {};
-        curGame.players.forEach(function(player) { players[player.userId] = player.score; });
+        curGame.players.forEach(function(player) {
+            players[player.userId] = { "score": player.score, "name": "foowoo" };
+        });
         msg["game-joined"] = { players: players };
         if(curGame.started) {
             msg["game-started"] = true;
