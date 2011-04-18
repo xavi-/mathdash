@@ -3,22 +3,67 @@
 <head>
     <link rel="stylesheet" class="theme-link" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/themes/excite-bike/jquery-ui.css" type="text/css" media="screen" /> 
     <style>
+        html, body { margin: 0; padding: 0; }
+        
         #main {
-            max-width: 958px;
+            max-width: 960px;
             margin: 0 auto;
-            border: 1px solid black;
             font-family: "quatro-1", "quatro-2","Arial Black", Verdana, "Droid Sans", sans-serif;
         }
         
-        #opponents {
-            margin: 0;
-            padding: 0;
+        #game-container {
+            position: relative;
+            overflow: hidden;
         }
         
+        #main .ui-state-highlight .ui-button-text { color: white; }
+        
+        .join-game, .start-game, .leave-game, .wait-message, .join-message { display: none; }
+        
+        .wait-message { margin: .3em 0 .2em 0; font-size: 1.2em; }
+        
+        .join-message { text-align: left; }
+        
+        .md-state-join .button-container {
+            position: absolute;
+            -moz-box-shadow: 0 5px 100px 10px black;
+            box-shadow: 0 5px 100px 10px black;
+            top: 0;
+            left: 50%;
+            margin-left: -200px;
+            text-align: center;
+            height: 300px;
+            width: 400px;
+            behavior: url(/libraries/pie.htc);
+        }
+        .md-state-join .join-message { display: block; }
+        .md-state-join .join-game { display: inline-block; }
+        
+        .md-state-wait .button-container {
+            position: absolute;
+            -moz-box-shadow: 0 0 100px 10px black;
+            box-shadow: 0 0 100px 10px black;
+            text-align: center;
+            width: 100%;
+            behavior: url(/libraries/pie.htc);
+        }
+        .md-state-wait .wait-message { display: block; }
+        .md-state-wait .start-game, .md-state-wait .leave-game { display: inline-block; font-size: .9em; }
+        
+        .md-state-play .button-container {
+            position: static;
+            margin-top: 16px;
+        }
+        .md-state-play .leave-game { display: inline-block; }
+        
+        #opponents {
+            padding: 0;
+            margin: 0;
+        }
         #opponents li {
             display: block;
             position: relative;
-            margin: 5px 0;
+            margin: 5px;
             padding: 0;
             list-style: none;
             padding-right: 80px;
@@ -29,31 +74,43 @@
             height: 50px;
             background: blue;
         }
+        .md-state-join .player-car {
+            background-color: gray;
+            opacity: .4;
+        }
         .mine.player-car {
             background: green;
         }
         
         #problem-container {
+            border: 1px solid gray;
             font-size: 2em;
+            padding: .5em 0;
             text-align: center;
-            padding: 1em;
             text-rendering: optimizelegibility;
         }
+        .md-state-play #problem-container { border: 1px solid orange; }
         
         #problem-container input {
             font-size: 1em;
             font-family: inherit;
             width: 3em;
-            border: none;
+            border: 1px solid gray;
             -moz-box-shadow: 0 0 5px 5px gray;
             box-shadow: 0 0 5px 5px gray;
             text-align: center;
             behavior: url(/libraries/pie.htc);
         }
-        
+        .md-state-play #problem-container input {
+            -moz-box-shadow: 0 0 5px 5px blue;
+            box-shadow: 0 0 5px 5px blue;
+            border: 1px solid blue;
+            behavior: url(/libraries/pie.htc);
+        }
         #problem-container input:focus {
             -moz-box-shadow: 0 0 5px 5px green;
             box-shadow: 0 0 5px 5px green;
+            border: 1px solid green;
             behavior: url(/libraries/pie.htc);
         }
         
@@ -64,29 +121,39 @@
 <body>
 <div id="main">
     <h1>Welcome to MathDash!</h1>
-    <div>
-        <ul id="opponents">
-            <li><div class="player-car empty">
-                <span class="opponent-name">???</span><br/><span class="opponent-score"></span>
-            </div></li>
-            <li><div class="player-car empty">
-                <span class="opponent-name">???</span><br/><span class="opponent-score"></span>
-            </div></li>
-            <li><div class="player-car empty">
-                <span class="opponent-name">???</span><br/><span class="opponent-score"></span>
-            </div></li>
-            <li><div class="player-car empty">
-                <span class="opponent-name">???</span><br/><span class="opponent-score"></span>
-            </div></li>
-        </ul>
-        <div id="problem-container">
-            <span id="problem">?? + ??</span> = <input id="answer" type="text" autocomplete="off" />
+    <div id="game-container">
+        <div class="ui-widget-content ui-corner-all">
+            <ul id="opponents" class="ui-widget-content ui-corner-top">
+                <li><div class="player-car empty">
+                    <span class="opponent-name">???</span><br/><span class="opponent-score"></span>
+                </div></li>
+                <li><div class="player-car empty">
+                    <span class="opponent-name">???</span><br/><span class="opponent-score"></span>
+                </div></li>
+                <li><div class="player-car empty">
+                    <span class="opponent-name">???</span><br/><span class="opponent-score"></span>
+                </div></li>
+                <li><div class="player-car empty">
+                    <span class="opponent-name">???</span><br/><span class="opponent-score"></span>
+                </div></li>
+            </ul>
+            <div id="problem-container" class="ui-corner-bottom">
+                <span id="problem">?? + ??</span> = <input id="answer" type="text" autocomplete="off" disabled="true" />
+            </div>
         </div>
-    </div>
-    <div class="button-container">
-        <a class="join-game" href="#">Join Game</a>
-        <a class="start-game" href="#">Start Game</a>
-        <a class="leave-game" href="#">Leave Game</a>
+        <div class="button-container">
+            <div class="join-message">
+                <ul>
+                    <li>Reason 1</li>
+                    <li>Reason 2</li>
+                    <li>Reason 3</li>
+                </ul>
+            </div>
+            <div class="wait-message">Waiting for other players...</div>
+            <a class="join-game" href="#">Join Game</a>
+            <a class="start-game" href="#">Start Game</a>
+            <a class="leave-game" href="#">Leave Game</a>
+        </div>
     </div>
 </div>
 <script type="text/javascript" src="http://ajax.cdnjs.com/ajax/libs/json2/20110223/json2.js" defer="true" async="true"></script>
@@ -95,6 +162,37 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
     var userId = "(: user-id :)", total = "(: total-score :)";
+    
+    function joinScreen() {
+        $("#game-container")
+            .addClass("md-state-join").removeClass("md-state-wait md-state-play");
+        $(".button-container")
+            .addClass("ui-state-highlight ui-corner-bottom")
+            .width("").height("").css({ left: "", top: "" });
+    }
+    
+    function waitScreen() {
+        $("#game-container")
+            .addClass("md-state-wait").removeClass("md-state-join md-state-play");
+        $(".button-container")
+            .addClass("ui-state-highlight ui-corner-bottom")
+            .height($("#problem-container").outerHeight() - 2)
+            .width($("#problem-container").width())
+            .position({
+                of: $("#problem-container"),
+                my: "left top",
+                at: "left top",
+                collision: "none none"
+            });
+    }
+    
+    function playScreen() {
+        $("#game-container")
+            .addClass("md-state-play").removeClass("md-state-join md-state-wait");
+        $(".button-container")
+            .removeClass("ui-state-highlight")
+            .width("").height("").css({ left: "", top: "" });
+    }
     
     var cars = {
         reset: function() {
@@ -131,28 +229,25 @@
         window.console && console.dir && console.dir(data);
         
         if("setup-done" in data) {
-            $(".join-game").show();
-            $(".start-game, .leave-game").hide();
             $(".disconnect-dialog").dialog("destroy");
+            joinScreen();
         }
         
         if("game-joined" in data) {
             var players = data["game-joined"].players;
             for(var id in players) { cars.update(id, players[id]); }
             
-            $(".start-game, .leave-game").show();
-            $(".join-game").hide();
+            waitScreen();
         }
         if("game-started" in data) {
-            $(".leave-game").show();
-            $(".join-game, .start-game").hide();
-            $("#answer").focus();
+            $("#answer").removeAttr("disabled").focus();
+            playScreen();
         }
         if("game-left" in data) {
-            $(".join-game").show();
-            $(".start-game, .leave-game").hide();
             $("#problem").text("?? + ??");
+            $("#answer").attr("disable", "true");
             cars.reset();
+            joinScreen();
         }
         if("player-added" in data) {
             var player = data["player-added"];
@@ -199,7 +294,7 @@
     });
     socket.on("message", handleMessage);
     
-    $(".button-container a").button().hide();
+    $(".button-container a").button();
     
     $(".join-game").click(function(e) {
         socket.send({ "join-game": true });
