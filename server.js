@@ -8,16 +8,22 @@ var bee = require("beeline");
 var bind = require("bind");
 var Cookies = require("cookies");
 
+var TOTAL_SCORE = 100, MAX_GAME_TIME = 5 * 60 * 1000;
+
 var route = bee.route({
     "/ /index.html": function(req, res) {
         var cookies = new Cookies(req, res);
         var userId = cookies.get("user-id") || Math.random().toString().substr(2);
         
         cookies.set("user-id", userId);
-        bind.toFile("./content/templates/index.html", { "user-id": userId, "total-score": 100 }, function(data) {
-            res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
-            res.end(data);
-        });
+        bind.toFile(
+            "./content/templates/index.html",
+            { "user-id": userId, "total-score": TOTAL_SCORE },
+            function(data) {
+                res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
+                res.end(data);
+            }
+        );
     },
     "/libraries/pie.htc": bee.staticFileHandler("./libraries/PIE/PIE.htc", "text/x-component")
 });
@@ -71,12 +77,28 @@ function Game() {
         }
     };
     
+    this.end = function() {
+        if(this.ended) { return; }
+        
+        this.ended = Date.now();
+        this.emit("game-ended", this);
+    };
+    
     this.answered = function(userId, answer) {
         var player = players[userId];
+        
+        if(player.finished) { return; }
+        
         if(player.questions.isCorrect(answer)) {
             player.score += 10;
             this.emit("correct-answer", player, answer);
-            player.questions.next();
+            
+            if(player.score < TOTAL_SCORE) {
+                player.questions.next();
+            } else {
+                player.finished = Date.now();
+                this.emit("player-finished", player);
+            }
         } else {
             this.emit("incorrect-answer", player, answer);
         }
@@ -116,10 +138,31 @@ util.inherits(Game, event.EventEmitter);
 
 var clients = {}, games = [];
 
+setInterval(function() { // Game reaper, doesn't take care of all memory leaks
+    games = games.filter(function(game) { // TODO: consider curGame in client closure and clients var
+        var reap = Date.now() - game.ended > MAX_GAME_TIME;
+        
+        if(reap) { console.log("A game has been reaped"); }
+        
+        return reap;
+    });
+}, MAX_GAME_TIME);
+
 var findOpenGame = (function() {
     function gameStarted(game) {
         this.players.forEach(function(player) {
             player.client.send({ "game-started": game.started });
+        });
+    }
+
+    function gameEnded(game) {
+        var ranks = {};
+        game.players
+            .sort(function(a, b) { return a.finished - b.finished; })
+            .forEach(function(player, idx) { ranks[player.userId] = idx; });
+        
+        this.players.forEach(function(player) {
+            player.client.send({ "game-ended": { "time": game.ended, "ranks": ranks } });
         });
     }
 
@@ -137,6 +180,16 @@ var findOpenGame = (function() {
             if(p.userId === player.userId) { return; }
             p.client.send({ "score-update": { "id": player.userId, "score": player.score } });
         });
+    }
+
+    function playerFinished(player) {
+        var rank = this.players.filter(function(p) {return p.finished < player.finished }).length;
+        player.client.send({ "finished-game": { "rank": rank } });
+        
+        this.players.forEach(function(p) {
+            if(p.userId === player.userId) { return; }
+            p.client.send({ "player-finished": { "id": player.userId, "rank": rank } });
+        })
     }
 
     function playerAdded(player) {
@@ -158,6 +211,18 @@ var findOpenGame = (function() {
             p.client.send({ "player-removed": player.userId });
         });
     }
+    
+    function gameManager() {
+        var game = this, players = game.players;
+        
+        if(game.started) {
+            if(players.length === 0) { game.end(); }
+            if(players.every(function(p) { return p.finished; })) { game.end(); }
+            if(Date.now() - game.started > 5 * 60 * 1000) { game.end(); }
+        } else { // Game not started
+            if(players.length >= 2) { game.start(); }
+        }
+    }
 
     return function findOpenGame() {
         var openGame = games.filter(function(game) { return !game.started; })[0];
@@ -166,11 +231,18 @@ var findOpenGame = (function() {
             games.push(openGame);
             
             openGame.on("game-started", gameStarted);
+            openGame.on("game-ended", gameEnded);
             openGame.on("new-question", newQuestion);
             openGame.on("correct-answer", correctAnswer);
             openGame.on("incorrect-answer", incorrectAnswer);
+            openGame.on("player-finished", playerFinished);
             openGame.on("player-added", playerAdded);
             openGame.on("player-removed", playerRemoved);
+            
+            openGame.on("correct-answer", gameManager);
+            openGame.on("player-finished", gameManager);
+            openGame.on("player-added", gameManager);
+            openGame.on("player-removed", gameManager);
         }
         
         return openGame
@@ -196,10 +268,17 @@ function reconnectLogic(userId, client, msg) {
         });
         msg["game-joined"] = { players: players };
         if(curGame.started) {
-            msg["game-started"] = true;
+            msg["game-started"] = curGame.started;
             msg["new-question"] = curGame.getPlayer(userId).questions.current();
         }
-        if(curGame.ended) { msg["game-ended"] = true; }
+        if(curGame.ended) {
+            var ranks = {};
+            curGame
+                .players
+                .sort(function(a, b) { return a.finished - b.finished; })
+                .forEach(function(player, idx) { ranks[player.userId] = idx; });
+            msg["game-ended"] = { "time": curGame.ended, "ranks": ranks };
+        }
     }
 }
 
@@ -207,7 +286,7 @@ var socket = io.listen(server);
 socket.on('connection', function(client){
     var curGame, userId;
     
-    console.log("A new client!!: sessionId: " + client.sessionId + "; userId: " + userId);
+    console.log("A new client!!: sessionId: " + client.sessionId);
     
     client.on('message', function(data){
         console.log("got message...: userId: " + userId + "; data: " + JSON.stringify(data));

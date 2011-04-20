@@ -19,13 +19,17 @@
         
         #main .ui-state-highlight .ui-button-text { color: white; }
         
-        .join-game, .start-game, .leave-game, .wait-message, .join-message { display: none; }
+        .join-button, .start-button, .leave-button, .play-again-button,
+        .disconnect-message, .connect-message, .wait-message, .join-message, .finish-message, .end-message
+        { display: none; }
         
-        .wait-message { margin: .3em 0 .2em 0; font-size: 1.2em; }
+        .finish-message, .end-message, .wait-message { margin: .3em 0 .2em 0; font-size: 1.2em; }
         
         .join-message { text-align: left; }
         
-        .md-state-join .button-container {
+        .md-state-disconnect .status-display,
+        .md-state-connect .status-display,
+        .md-state-join .status-display {
             position: absolute;
             -moz-box-shadow: 0 5px 100px 10px black;
             box-shadow: 0 5px 100px 10px black;
@@ -37,25 +41,36 @@
             width: 400px;
             behavior: url(/libraries/pie.htc);
         }
+        .md-state-disconnect .disconnect-message { display: block; }
+        .md-state-connect .connect-message { display: block; }
         .md-state-join .join-message { display: block; }
-        .md-state-join .join-game { display: inline-block; }
+        .md-state-join .join-button { display: inline-block; }
         
-        .md-state-wait .button-container {
+        .md-state-wait .status-display,
+        .md-state-finish .status-display,
+        .md-state-end .status-display {
             position: absolute;
+            left: 2px;
+            right: 2px;
+            bottom: 2px;
             -moz-box-shadow: 0 0 100px 10px black;
             box-shadow: 0 0 100px 10px black;
             text-align: center;
-            width: 100%;
             behavior: url(/libraries/pie.htc);
         }
         .md-state-wait .wait-message { display: block; }
-        .md-state-wait .start-game, .md-state-wait .leave-game { display: inline-block; font-size: .9em; }
+        .md-state-wait .start-button, .md-state-wait .leave-button { display: inline-block; font-size: .9em; }
+        .md-state-finish .play-again-button, .md-state-end .play-again-button { display: inline-block; }
+        .play-again-button { font-size: .9em; }
         
-        .md-state-play .button-container {
+        .md-state-finish .finish-message { display: block; }
+        .md-state-end .end-message { display: block; }
+        
+        .md-state-play .status-display {
             position: static;
             margin-top: 16px;
         }
-        .md-state-play .leave-game { display: inline-block; }
+        .md-state-play .leave-button { display: inline-block; }
         
         #opponents {
             padding: 0;
@@ -126,23 +141,30 @@
         <div class="ui-widget-content ui-corner-all">
             <ul id="opponents" class="ui-widget-content ui-corner-top">
                 <li><div class="player-car empty">
-                    <span class="opponent-name">???</span><br/><span class="opponent-score"></span>
+                    <span class="car-name">???</span><br/><span class="car-score"></span><span class="car-rank"></span>
                 </div></li>
                 <li><div class="player-car empty">
-                    <span class="opponent-name">???</span><br/><span class="opponent-score"></span>
+                    <span class="car-name">???</span><br/><span class="car-score"></span><span class="car-rank"></span>
                 </div></li>
                 <li><div class="player-car empty">
-                    <span class="opponent-name">???</span><br/><span class="opponent-score"></span>
+                    <span class="car-name">???</span><br/><span class="car-score"></span><span class="car-rank"></span>
                 </div></li>
                 <li><div class="player-car empty">
-                    <span class="opponent-name">???</span><br/><span class="opponent-score"></span>
+                    <span class="car-name">???</span><br/><span class="car-score"></span><span class="car-rank"></span>
                 </div></li>
             </ul>
             <div id="problem-container" class="ui-corner-bottom">
                 <span id="problem">?? + ??</span> = <input id="answer" type="text" autocomplete="off" disabled="true" />
             </div>
         </div>
-        <div class="button-container">
+        <div class="status-display">
+            <div class="disconnect-message">
+                Lost connection with server...
+            </div>
+            <div class="connect-message">
+                Connecting to server...
+            </div>
+            <div class="wait-message">Waiting for other players...</div>
             <div class="join-message">
                 <ul>
                     <li>Reason 1</li>
@@ -150,10 +172,16 @@
                     <li>Reason 3</li>
                 </ul>
             </div>
-            <div class="wait-message">Waiting for other players...</div>
-            <a class="join-game" href="#">Join Game</a>
-            <a class="start-game" href="#">Start Game</a>
-            <a class="leave-game" href="#">Leave Game</a>
+            <div class="finish-message">
+                You've finshed the race.  You got <span class="rank"></span> place.
+            </div>
+            <div class="end-message">
+                Game over.  You got <span class="rank"></span> place.
+            </div>
+            <a class="join-button" href="#">Join Game</a>
+            <a class="start-button" href="#">Start Game</a>
+            <a class="leave-button" href="#">Leave Game</a>
+            <a class="play-again-button" href="#">Play Again</a>
         </div>
     </div>
 </div>
@@ -164,35 +192,45 @@
 <script>
     var userId = "(: user-id :)", total = "(: total-score :)";
     
+    var states =
+        "md-state-disconnect md-state-connect md-state-join md-state-wait md-state-play md-state-finish md-state-end";
+    function disconnectScreen() {
+        $("#game-container").removeClass(states).addClass("md-state-disconnect");
+        $(".status-display").addClass("ui-state-highlight ui-corner-bottom").css("top", "");
+    }
+    function connectScreen() {
+        $("#game-container").removeClass(states).addClass("md-state-connect");
+        $(".status-display").addClass("ui-state-highlight ui-corner-bottom").css("top", "");
+    }
     function joinScreen() {
-        $("#game-container")
-            .addClass("md-state-join").removeClass("md-state-wait md-state-play");
-        $(".button-container")
-            .addClass("ui-state-highlight ui-corner-bottom")
-            .width("").height("").css({ left: "", top: "" });
+        $("#game-container").removeClass(states).addClass("md-state-join");
+        $(".status-display").addClass("ui-state-highlight ui-corner-bottom").css("top", "");
     }
-    
     function waitScreen() {
-        $("#game-container")
-            .addClass("md-state-wait").removeClass("md-state-join md-state-play");
-        $(".button-container")
+        $("#game-container").removeClass(states).addClass("md-state-wait");
+        $(".status-display")
             .addClass("ui-state-highlight ui-corner-bottom")
-            .height($("#problem-container").outerHeight() - 2)
-            .width($("#problem-container").width())
-            .position({
-                of: $("#problem-container"),
-                my: "left top",
-                at: "left top",
-                collision: "none none"
-            });
+            .css("top", $("#problem-container").position().top);
+    }
+    function playScreen() {
+        $("#game-container").removeClass(states).addClass("md-state-play");
+        $(".status-display").removeClass("ui-state-highlight").css("top", "");
     }
     
-    function playScreen() {
-        $("#game-container")
-            .addClass("md-state-play").removeClass("md-state-join md-state-wait");
-        $(".button-container")
-            .removeClass("ui-state-highlight")
-            .width("").height("").css({ left: "", top: "" });
+    var places = [ "1st", "2nd", "3rd", "4th" ];
+    function finishScreen(rank) {
+        $("#game-container").removeClass(states).addClass("md-state-finish");
+        $(".status-display")
+            .addClass("ui-state-highlight ui-corner-bottom")
+            .css("top", $("#problem-container").position().top)
+            .find(".finish-message .rank").text(places[rank]);
+    }
+    function endScreen(ranks) {
+        $("#game-container").removeClass(states).addClass("md-state-end");
+        $(".status-display")
+            .addClass("ui-state-highlight ui-corner-bottom")
+            .css("top", $("#problem-container").position().top)
+            .find(".end-message .rank").text(places[ranks[userId]]);
     }
     
     var cars = {
@@ -203,8 +241,9 @@
         remove: function(id) {
             $("#opponents").find("[data-id=" + id + "]")
                 .attr("data-id", "")
-                .find(".opponent-name").text("???").end()
-                .find(".opponent-score").text("").end()
+                .find(".car-name").text("???").end()
+                .find(".car-score").text("").end()
+                .find(".car-rank").text("").end()
                 .find(".player-car")
                     .css("left", "0")
                     .addClass("empty")
@@ -215,8 +254,8 @@
             if($car.length === 0) { $car = $("#opponents li").has(".player-car.empty").first(); }
             
             $car.attr("data-id", id)
-                .find(".opponent-name").text(function(idx, text) { return options.name || text }).end()
-                .find(".opponent-score").text(function(idx, text) { return options.score || text }).end()
+                .find(".car-name").text(function(idx, text) { return options.name || text }).end()
+                .find(".car-score").text(function(idx, text) { return options.score || text }).end()
                 .find(".player-car")
                     .each(function() {
                         if(!options.score) { return; }
@@ -224,13 +263,17 @@
                     })
                     .toggleClass("mine", userId === id)
                     .removeClass("empty");
+        },
+        finished: function(id, rank) {
+            $("#opponents").find("[data-id=" + id + "]")
+                .addClass(".md-state-finished")
+                .find(".car-rank").text(rank);
         }
     }
     function handleMessage(data) {
         window.console && console.dir && console.dir(data);
         
         if("setup-done" in data) {
-            $(".disconnect-dialog").dialog("destroy");
             joinScreen();
         }
         
@@ -249,6 +292,23 @@
             $("#answer").attr("disable", "true");
             cars.reset();
             joinScreen();
+        }
+        if("game-ended" in data) {
+            $("#problem").text("?? + ??");
+            $("#answer").attr("disable", "true");
+            endScreen(data["game-ended"].ranks);
+        }
+        if("finished-game" in data) {
+            $("#problem").text("?? + ??");
+            $("#answer").attr("disable", "true");
+            
+            var info = data["finished-game"];
+            cars.finished(userId, info.rank);
+            finishScreen(info.rank);
+        }
+        if("player-finished" in data) {
+            var info = data["player-finished"];
+            cars.finished(info.id, info.rank);
         }
         if("player-added" in data) {
             var player = data["player-added"];
@@ -289,25 +349,25 @@
         socket.send({ setup: { "user-id": userId } });
     });
     socket.on("disconnect", function() {
-        $("<div class='disconnect-dialog'>You just got dis conuct bro</div>").dialog();
-        $(".join-game, .start-game, .leave-game").hide();
-        setTimeout(function() { socket.connect(); }, 1000);
+        disconnectScreen();
+        setTimeout(function() { socket.connect(); connectScreen(); }, 500);
     });
     socket.on("message", handleMessage);
+    connectScreen();
     
-    $(".button-container a").button();
+    $(".status-display a").button();
     
-    $(".join-game").click(function(e) {
+    $(".join-button, .play-again-button").click(function(e) {
         socket.send({ "join-game": true });
         e.preventDefault();
     });
     
-    $(".start-game").click(function(e) {
+    $(".start-button").click(function(e) {
         socket.send({ "start-game": true });
         e.preventDefault();
     });
     
-    $(".leave-game").click(function(e) {
+    $(".leave-button").click(function(e) {
         socket.send({ "leave-game": true });
         e.preventDefault();
     });
