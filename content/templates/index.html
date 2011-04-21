@@ -20,7 +20,8 @@
         #main .ui-state-highlight .ui-button-text { color: white; }
         
         .join-button, .start-button, .leave-button, .play-again-button,
-        .disconnect-message, .connect-message, .wait-message, .join-message, .finish-message, .end-message
+        .disconnect-message, .connect-message, .wait-message, 
+        .starting-message, .join-message, .finish-message, .end-message
         { display: none; }
         
         .finish-message, .end-message, .wait-message { margin: .3em 0 .2em 0; font-size: 1.2em; }
@@ -47,6 +48,7 @@
         .md-state-join .join-button { display: inline-block; }
         
         .md-state-wait .status-display,
+        .md-state-starting .status-display,
         .md-state-finish .status-display,
         .md-state-end .status-display {
             position: absolute;
@@ -60,6 +62,7 @@
         }
         .md-state-wait .wait-message { display: block; }
         .md-state-wait .start-button, .md-state-wait .leave-button { display: inline-block; font-size: .9em; }
+        .md-state-starting .starting-message { display: block; font-size: 2em; line-height: 80px; }
         .md-state-finish .play-again-button, .md-state-end .play-again-button { display: inline-block; }
         .play-again-button { font-size: .9em; }
         
@@ -165,6 +168,9 @@
                 Connecting to server...
             </div>
             <div class="wait-message">Waiting for other players...</div>
+            <div class="starting-message">
+                Game starting in <span class="starting-count-down"></span>...
+            </div>
             <div class="join-message">
                 <ul>
                     <li>Reason 1</li>
@@ -193,7 +199,7 @@
     var userId = "(: user-id :)", total = "(: total-score :)";
     
     var states =
-        "md-state-disconnect md-state-connect md-state-join md-state-wait md-state-play md-state-finish md-state-end";
+        "md-state-disconnect md-state-connect md-state-join md-state-wait md-state-starting md-state-play md-state-finish md-state-end";
     function disconnectScreen() {
         $("#game-container").removeClass(states).addClass("md-state-disconnect");
         $(".status-display").addClass("ui-state-highlight ui-corner-bottom").css("top", "");
@@ -208,6 +214,12 @@
     }
     function waitScreen() {
         $("#game-container").removeClass(states).addClass("md-state-wait");
+        $(".status-display")
+            .addClass("ui-state-highlight ui-corner-bottom")
+            .css("top", $("#problem-container").position().top);
+    }
+    function startingScreen() {
+        $("#game-container").removeClass(states).addClass("md-state-starting");
         $(".status-display")
             .addClass("ui-state-highlight ui-corner-bottom")
             .css("top", $("#problem-container").position().top);
@@ -231,6 +243,19 @@
             .addClass("ui-state-highlight ui-corner-bottom")
             .css("top", $("#problem-container").position().top)
             .find(".end-message .rank").text(places[ranks[userId]]);
+    }
+    
+    function showStartingCountDown(time) {
+        $(".starting-count-down").text(Math.round(time / 1000));
+        
+        if(time <= 0) { return; }
+        
+        var then = (new Date()).getTime();
+        setTimeout(function() {
+            var now = (new Date()).getTime();
+            var elapse = now - then;
+            showStartingCountDown(time - elapse);
+        }, Math.min(1000, time));
     }
     
     var cars = {
@@ -267,7 +292,7 @@
         finished: function(id, rank) {
             $("#opponents").find("[data-id=" + id + "]")
                 .addClass(".md-state-finished")
-                .find(".car-rank").text(rank);
+                .find(".car-rank").text(places[rank]);
         }
     }
     function handleMessage(data) {
@@ -282,6 +307,10 @@
             for(var id in players) { cars.update(id, players[id]); }
             
             waitScreen();
+        }
+        if("game-starting" in data) {
+            showStartingCountDown(data["game-starting"]);
+            startingScreen();
         }
         if("game-started" in data) {
             $("#answer").removeAttr("disabled").focus();

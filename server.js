@@ -140,7 +140,7 @@ var clients = {}, games = [];
 
 setInterval(function() { // Game reaper, doesn't take care of all memory leaks
     games = games.filter(function(game) { // TODO: consider curGame in client closure and clients var
-        var reap = Date.now() - game.ended > MAX_GAME_TIME;
+        var reap = Date.now() - game.ended < MAX_GAME_TIME;
         
         if(reap) { console.log("A game has been reaped"); }
         
@@ -207,7 +207,7 @@ var findOpenGame = (function() {
     function playerRemoved(player) {
         player.client.send({ "game-left": true });
         this.players.forEach(function(p) {
-            if(p.userId === player.userId) { return; }  
+            if(p.userId === player.userId) { return; }
             p.client.send({ "player-removed": player.userId });
         });
     }
@@ -220,7 +220,20 @@ var findOpenGame = (function() {
             if(players.every(function(p) { return p.finished; })) { game.end(); }
             if(Date.now() - game.started > 5 * 60 * 1000) { game.end(); }
         } else { // Game not started
-            if(players.length >= 2) { game.start(); }
+            if(players.length >= 2) {
+                
+                if(!game.startTimer) {
+                    game.startTimer = setTimeout(function() {
+                        game.start();
+                        game.startingAt = null;
+                        game.startTimer = null;
+                    }, 10000);
+                    game.startingAt = Date.now() + 10000;
+                    this.players.forEach(function(p) {
+                        p.client.send({ "game-starting": 9000 });
+                    });
+                }
+            }
         }
     }
 
@@ -267,6 +280,9 @@ function reconnectLogic(userId, client, msg) {
             players[player.userId] = { "score": player.score, "name": "foowoo" };
         });
         msg["game-joined"] = { players: players };
+        if(curGame.startingAt) {
+            msg["game-starting"] = curGame.startingAt - Date.now();
+        }
         if(curGame.started) {
             msg["game-started"] = curGame.started;
             msg["new-question"] = curGame.getPlayer(userId).questions.current();
