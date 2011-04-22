@@ -14,11 +14,16 @@ var route = bee.route({
     "/ /index.html": function(req, res) {
         var cookies = new Cookies(req, res);
         var userId = cookies.get("user-id") || Math.random().toString().substr(2);
+        var userName = cookies.get("user-name") || "";
+        
+        if(userName && clients[userId]) { clients[userId].name = userName; }
+        if(clients[userId] && clients[userId].name) { userName = clients[userId].name; }
         
         cookies.set("user-id", userId);
+        cookies.set("user-name", userName);
         bind.toFile(
             "./content/templates/index.html",
-            { "user-id": userId, "total-score": TOTAL_SCORE },
+            { "user-id": userId, "total-score": TOTAL_SCORE, "user-name": userName },
             function(data) {
                 res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
                 res.end(data);
@@ -195,12 +200,16 @@ var findOpenGame = (function() {
     function playerAdded(player) {
         var players = {};
         this.players.forEach(function(player) {
-            players[player.userId] = { "score": player.score, "name": "foowoo" };
+            players[player.userId] = { "score": player.score, "name": clients[player.userId].name };
         });
         player.client.send({ "game-joined": { "players": players } });
         this.players.forEach(function(p) {
             if(p.userId === player.userId) { return; }
-            p.client.send({ "player-added": { "id": player.userId, "score": player.score, "name": "foowoo" } });
+            p.client.send({
+                "player-added": {
+                    "id": player.userId, "score": player.score, "name": clients[player.userId].name
+                }
+            });
         });
     }
 
@@ -277,7 +286,7 @@ function reconnectLogic(userId, client, msg) {
         
         var players = {};
         curGame.players.forEach(function(player) {
-            players[player.userId] = { "score": player.score, "name": "foowoo" };
+            players[player.userId] = { "score": player.score, "name": clients[player.userId].name };
         });
         msg["game-joined"] = { players: players };
         if(curGame.startingAt) {
@@ -318,6 +327,9 @@ socket.on('connection', function(client){
             }
             
             client.send(msg);
+        }
+        if("user-name" in data) {
+            clients[userId].name = data["user-name"];
         }
         if("join-game" in data) {
             if(curGame) { curGame.removePlayer(userId); }

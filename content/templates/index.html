@@ -196,7 +196,7 @@
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/jquery-ui.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
-    var userId = "(: user-id :)", total = "(: total-score :)";
+    var userId = "(: user-id :)", total = "(: total-score :)", userName = "(: user-name :)";
     
     var states =
         "md-state-disconnect md-state-connect md-state-join md-state-wait md-state-starting md-state-play md-state-finish md-state-end";
@@ -387,7 +387,10 @@
     $(".status-display a").button();
     
     $(".join-button, .play-again-button").click(function(e) {
-        socket.send({ "join-game": true });
+        socket.send({
+            "user-name": userName || prompt("Welcome to MathDash! What's your name?", ""),
+            "join-game": true
+        });
         e.preventDefault();
     });
     
