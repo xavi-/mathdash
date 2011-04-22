@@ -139,6 +139,13 @@
         
         .answer-correct { background: green; }
         .answer-incorrect { background: red; }
+        
+        .name-dialog { display: none; }
+        .name-dialog input { width: 200px; }
+        .name-dialog.error input { border: 2px solid red; }
+        
+        .error-text { display: none; color: red; }
+        .name-dialog.error .error-text { display: block; }
     </style>
 </head>
 <body>
@@ -194,6 +201,10 @@
             <a class="play-again-button" href="#">Play Again</a>
         </div>
     </div>
+</div>
+<div class="name-dialog" title="Enter name">
+    <label>Name: <input id="name-input" type=text/></label>
+    <span class="error-text">Please enter your name.</span>
 </div>
 <script type="text/javascript" src="http://ajax.cdnjs.com/ajax/libs/json2/20110223/json2.js" defer="true" async="true"></script>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
@@ -261,6 +272,31 @@
             showStartingCountDown(time - elapse);
         }, Math.min(1000, time));
     }
+    
+    function showNameDialog() {
+        $(".name-dialog").dialog({
+            modal: true,
+            resizable: false,
+            buttons: {
+                "OK": function() {
+                    var name = $.trim($("#name-input").val());
+                    
+                    if(!name) { $(".name-dialog").addClass("error"); return; }
+                    
+                    userName = name;
+                    
+                    $(".name-dialog").dialog("close");
+                    $(".join-button").click();
+                },
+                "Cancel": function() { $(this).dialog("close"); }
+            }
+        }).removeClass("error");
+    }
+    $("#name-input").bind("keypress", function(e) {
+        if(e.keyCode !== $.ui.keyCode.ENTER) { return; }
+        
+        $(".name-dialog").dialog("option", "buttons")["OK"]()
+    });
     
     var cars = {
         reset: function() {
@@ -391,10 +427,9 @@
     $(".status-display a").button();
     
     $(".join-button, .play-again-button").click(function(e) {
-        socket.send({
-            "user-name": userName || prompt("Welcome to MathDash! What's your name?", ""),
-            "join-game": true
-        });
+        if(!userName) { showNameDialog(); return; }
+        
+        socket.send({ "user-name": userName, "join-game": true });
         e.preventDefault();
     });
     
