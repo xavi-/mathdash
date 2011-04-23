@@ -144,13 +144,12 @@ util.inherits(Game, event.EventEmitter);
 var clients = {}, games = [];
 
 setInterval(function() { // Game reaper, doesn't take care of all memory leaks
-    games = games.filter(function(game) { // TODO: consider curGame in client closure and clients var
-        var reap = Date.now() - game.ended < MAX_GAME_TIME;
-        
-        if(reap) { console.log("A game has been reaped"); }
-        
-        return reap;
-    });
+    for(var i = 0; i < games.length; i++) { // Don't user filter -- makes games unavailble to repl
+        if((Date.now() - games[i].ended) < MAX_GAME_TIME) {
+            console.log("A game has been reaped");
+            games.splice(i--, 1);
+        }
+    }
 }, MAX_GAME_TIME);
 
 var findOpenGame = (function() {
@@ -368,6 +367,7 @@ socket.on('connection', function(client){
             clients[userId] = null;
             delete clients[userId];
             userId = null;
+            curGame = null;
         }, 10000);
         
         console.log("About to disconnect: " + userId);
