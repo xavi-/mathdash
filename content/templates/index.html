@@ -429,28 +429,27 @@
     $(".status-display a").button();
     
     $(".join-button, .play-again-button").click(function(e) {
+        e.preventDefault();
         if(!userName) { showNameDialog(); return; }
         
         socket.send({ "user-name": userName, "join-game": true });
-        e.preventDefault();
     });
     
     $(".start-button").click(function(e) {
-        socket.send({ "start-game": true });
         e.preventDefault();
+        socket.send({ "start-game": true });
     });
     
     $(".leave-button").click(function(e) {
-        socket.send({ "leave-game": true });
         e.preventDefault();
+        socket.send({ "leave-game": true });
     });
     
     $("#answer").keypress(function(e) {
         if(e.which !== $.ui.keyCode.ENTER) { return; }
         
-        socket.send({ answer: $(this).val() });
-        
         e.preventDefault();
+        socket.send({ answer: $(this).val() });
     });
 </script>
 </body>
