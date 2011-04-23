@@ -226,7 +226,7 @@ var findOpenGame = (function() {
         if(game.started) {
             if(players.length === 0) { game.end(); }
             if(players.every(function(p) { return p.finished; })) { game.end(); }
-            if(Date.now() - game.started > 5 * 60 * 1000) { game.end(); }
+            if(Date.now() - game.started > MAX_GAME_TIME) { game.end(); }
         } else { // Game not started
             if(players.length >= 2) {
                 
