@@ -360,18 +360,18 @@
         }
         if("game-left" in data) {
             $("#problem").text("?? + ??");
-            $("#answer").attr("disable", "true");
+            $("#answer").attr("disabled", "true");
             cars.reset();
             joinScreen();
         }
         if("game-ended" in data) {
             $("#problem").text("?? + ??");
-            $("#answer").attr("disable", "true");
+            $("#answer").attr("disabled", "true");
             endScreen(data["game-ended"].ranks);
         }
         if("finished-game" in data) {
             $("#problem").text("?? + ??");
-            $("#answer").attr("disable", "true");
+            $("#answer").attr("disabled", "true");
             
             var info = data["finished-game"];
             cars.finished(userId, info.rank);
