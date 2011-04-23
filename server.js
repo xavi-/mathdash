@@ -193,7 +193,7 @@ var findOpenGame = (function() {
         
         this.players.forEach(function(p) {
             if(p.userId === player.userId) { return; }
-            p.client.send({ "player-finished": { "id": player.userId, "rank": rank } });
+            p.client.send({ "player-finished": [ { "id": player.userId, "rank": rank } ] });
         })
     }
 
@@ -282,7 +282,8 @@ function reconnectLogic(userId, client, msg) {
     
     var curGame = clients[userId].curGame;
     if(curGame) {
-        curGame.getPlayer(userId).client = client;
+        var player = curGame.getPlayer(userId);
+        player.client = client;
         
         var players = {};
         curGame.players.forEach(function(player) {
@@ -295,11 +296,20 @@ function reconnectLogic(userId, client, msg) {
         if(curGame.started) {
             msg["game-started"] = curGame.started;
             msg["new-question"] = curGame.getPlayer(userId).questions.current();
+            msg["player-finished"] =
+                curGame.players
+                    .filter(function(p) { return p.finished; })
+                    .sort(function(a, b) { return a.finished - b.finished; })
+                    .map(function(p, idx) { return { "id": p.userId, "rank": idx }; })
+                    .filter(function(info) { return info.id !== player.userId; });
+        }
+        if(player.finished) {
+            var rank = curGame.players.filter(function(p) {return p.finished < player.finished }).length;
+            msg["finished-game"] = { "rank": rank };
         }
         if(curGame.ended) {
             var ranks = {};
-            curGame
-                .players
+            curGame.players
                 .sort(function(a, b) { return a.finished - b.finished; })
                 .forEach(function(player, idx) { ranks[player.userId] = idx; });
             msg["game-ended"] = { "time": curGame.ended, "ranks": ranks };

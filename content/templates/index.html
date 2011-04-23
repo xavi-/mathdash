@@ -379,7 +379,9 @@
         }
         if("player-finished" in data) {
             var info = data["player-finished"];
-            cars.finished(info.id, info.rank);
+            for(var i = 0; i < info.length; i++) {
+                cars.finished(info[i].id, info[i].rank);
+            }
         }
         if("player-added" in data) {
             var player = data["player-added"];
