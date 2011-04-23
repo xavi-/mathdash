@@ -358,7 +358,7 @@ socket.on('connection', function(client){
         }
     });
     client.on('disconnect', function(){
-        if(!userId) { return; }
+        if(!userId) { return; } // Handle case where setup isn't done
         if(clients[userId].client.sessionId !== client.sessionId) { return; }
         if(clients[userId].client.connected) { return; }
         
@@ -367,6 +367,7 @@ socket.on('connection', function(client){
             if(curGame) { curGame.removePlayer(userId); }
             clients[userId] = null;
             delete clients[userId];
+            userId = null;
         }, 10000);
         
         console.log("About to disconnect: " + userId);
