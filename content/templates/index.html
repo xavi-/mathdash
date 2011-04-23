@@ -93,6 +93,8 @@
             height: 50px;
             background: blue;
         }
+        .md-state-disconnect .player-car,
+        .md-state-connect .player-car,
         .md-state-join .player-car {
             background-color: gray;
             opacity: .4;
@@ -151,7 +153,7 @@
 <body>
 <div id="main">
     <h1>Welcome to MathDash!</h1>
-    <div id="game-container">
+    <div id="game-container" class="md-state-connect">
         <div class="ui-widget-content ui-corner-all">
             <ul id="opponents" class="ui-widget-content ui-corner-top">
                 <li><div class="player-car empty">
@@ -171,7 +173,7 @@
                 <span id="problem">?? + ??</span> = <input id="answer" type="text" autocomplete="off" disabled="true" />
             </div>
         </div>
-        <div class="status-display">
+        <div class="status-display ui-state-highlight">
             <div class="disconnect-message">
                 Lost connection with server...
             </div>
