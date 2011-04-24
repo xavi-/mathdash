@@ -197,7 +197,12 @@ var findOpenGame = (function() {
         this.players.forEach(function(player) {
             players[player.userId] = { "score": player.score, "name": clients[player.userId].name };
         });
-        player.client.send({ "game-joined": { "players": players } });
+        var msg = { "game-joined": { "players": players } };
+        if(this.startingAt > Date.now()) {
+            msg["game-starting"] = this.startingAt - Date.now();
+        }
+        player.client.send(msg);
+        
         this.broadcast({
             "player-added": {
                 "id": player.userId, "score": player.score, "name": clients[player.userId].name
@@ -281,7 +286,7 @@ function reconnectLogic(userId, client, msg) {
             players[player.userId] = { "score": player.score, "name": clients[player.userId].name };
         });
         msg["game-joined"] = { players: players };
-        if(curGame.startingAt) {
+        if(curGame.startingAt > Date.now()) {
             msg["game-starting"] = curGame.startingAt - Date.now();
         }
         if(curGame.started) {
