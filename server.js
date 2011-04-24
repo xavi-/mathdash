@@ -124,10 +124,16 @@ function Game() {
         if(!(userId in players)) { return; }
         
         var player = players[userId];
-        players[userId] = null;
-        delete players[userId];
-        
-        self.emit("player-removed", player)
+        if(this.started) {
+            players[userId].gone = Date.now();
+            
+            self.emit("player-gone", player);
+        } else {
+            players[userId] = null;
+            delete players[userId];
+            
+            self.emit("player-removed", player);
+        }
     };
     
     this.getPlayer = function(userId) {
@@ -220,6 +226,14 @@ var findOpenGame = (function() {
         });
     }
     
+    function playerGone(player) {
+        player.client.send({ "game-left": true });
+        this.players.forEach(function(p) {
+            if(p.userId === player.userId) { return; }
+            p.client.send({ "player-gone": [ { "id":  player.userId } ] });
+        });
+    }
+    
     function gameManager() {
         var game = this, players = game.players;
         
@@ -256,6 +270,7 @@ var findOpenGame = (function() {
             openGame.on("new-question", newQuestion);
             openGame.on("correct-answer", correctAnswer);
             openGame.on("incorrect-answer", incorrectAnswer);
+            openGame.on("player-gone", playerGone);
             openGame.on("player-finished", playerFinished);
             openGame.on("player-added", playerAdded);
             openGame.on("player-removed", playerRemoved);
@@ -295,6 +310,10 @@ function reconnectLogic(userId, client, msg) {
         if(curGame.started) {
             msg["game-started"] = curGame.started;
             msg["new-question"] = curGame.getPlayer(userId).questions.current();
+            msg["player-gone"] =
+                curGame.players
+                    .filter(function(p) { return p.gone; })
+                    .map(function(p) { return { "id": p.userId }; });
             msg["player-finished"] =
                 curGame.players
                     .filter(function(p) { return p.finished; })
