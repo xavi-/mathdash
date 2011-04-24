@@ -230,9 +230,7 @@ var findOpenGame = (function() {
                         game.startTimer = null;
                     }, 10000);
                     game.startingAt = Date.now() + 10000;
-                    this.players.forEach(function(p) {
-                        p.client.send({ "game-starting": 9000 });
-                    });
+                    game.broadcast({ "game-starting": 9000 });
                 }
             }
         }
