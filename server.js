@@ -7,28 +7,41 @@ var io = require("socket.io");
 var bee = require("beeline");
 var bind = require("bind");
 var Cookies = require("cookies");
+var uuid = require("node-uuid");
+var CouchClient = require("couch-client");
 
 var TOTAL_SCORE = 100, MAX_GAME_TIME = 5 * 60 * 1000;
+
+var users = CouchClient("/users");
 
 var route = bee.route({
     "/ /index.html": function(req, res) {
         var cookies = new Cookies(req, res);
-        var userId = cookies.get("user-id") || Math.random().toString().substr(2);
-        var userName = cookies.get("user-name") || "";
+        var userId = cookies.get("user-id");
         
-        if(userName && clients[userId]) { clients[userId].name = userName; }
-        if(clients[userId] && clients[userId].name) { userName = clients[userId].name; }
-        
-        cookies.set("user-id", userId);
-        cookies.set("user-name", userName);
-        bind.toFile(
-            "./content/templates/index.html",
-            { "user-id": userId, "total-score": TOTAL_SCORE, "user-name": userName },
-            function(data) {
-                res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
-                res.end(data);
-            }
-        );
+        users.get(userId, function(err, result) {
+            if(err) { // Unknown user
+                userId = uuid(); result = { "_id": userId, "name": cookies.get("user-name") };
+                users.save(result, function(err, result) {
+                    if(err) { return console.error(err); }
+                    
+                    users[userId] = result;
+                });
+            } else { users[userId] = result; }
+            
+            if(clients[userId]) { clients[userId].name = result.name; }
+            
+            cookies.set("user-id", userId, { expires: new Date(2050, 11, 31) });
+            cookies.set("user-name", result.name, { expires: new Date(2050, 11, 31) });
+            bind.toFile(
+                "./content/templates/index.html",
+                { "user-id": userId, "total-score": TOTAL_SCORE, "user-name": result.name },
+                function(data) {
+                    res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
+                    res.end(data);
+                }
+            );
+        });
     },
     "/libraries/pie.htc": bee.staticFileHandler("./libraries/PIE/PIE.htc", "text/x-component")
 });
@@ -339,7 +352,12 @@ socket.on('connection', function(client){
             client.send(msg);
         }
         if("user-name" in data) {
-            clients[userId].name = data["user-name"];
+            users[userId].name = clients[userId].name = data["user-name"];
+            users.save(users[userId], function(err, result) {
+                if(err) { return console.error(err); }
+                
+                users[userId] = result;
+            });
         }
         if("join-game" in data) {
             if(curGame) { curGame.removePlayer(userId); }
