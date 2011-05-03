@@ -43,7 +43,7 @@ var route = bee.route({
             );
         });
     },
-    "/libraries/pie.htc": bee.staticFileHandler("./libraries/PIE/PIE.htc", "text/x-component")
+    "/libraries/pie.htc": bee.staticFile("./libraries/PIE/PIE.htc", "text/x-component")
 });
 
 var server = http.createServer(route);
