@@ -1,4 +1,5 @@
 var http = require("http");
+var query = require("querystring");
 var net = require("net");
 var repl = require("repl");
 var event = require("events");
@@ -15,19 +16,22 @@ var TOTAL_SCORE = 100, MAX_GAME_TIME = 5 * 60 * 1000;
 var users = CouchClient("/users");
 
 var route = bee.route({
+    "r`^/css/(.*)$`": bee.staticDir("./content/css", { ".css": "text/css" }),
+    "/libraries/pie.htc": bee.staticFile("./libraries/PIE/PIE.htc", "text/x-component"),
     "/ /index.html": function(req, res) {
         var cookies = new Cookies(req, res);
         var userId = cookies.get("user-id");
         
         users.get(userId, function(err, result) {
             if(err) { // Unknown user
-                userId = uuid(); result = { "_id": userId, "name": cookies.get("user-name") };
+                userId = uuid(); result = { "_id": userId, "name": cookies.get("user-name"), created: new Date() };
                 users.save(result, function(err, result) {
                     if(err) { return console.error(err); }
                     
-                    users[userId] = result;
+                    users[userId]._rev = result.rev;
                 });
-            } else { users[userId] = result; }
+            }
+            users[userId] = result;
             
             if(clients[userId]) { clients[userId].name = result.name; }
             
@@ -43,7 +47,110 @@ var route = bee.route({
             );
         });
     },
-    "/libraries/pie.htc": bee.staticFile("./libraries/PIE/PIE.htc", "text/x-component")
+    "/logout /signout": function(req, res) {
+        var cookies = new Cookies(req, res);
+        cookies.set("user-id", uuid());
+        cookies.set("user-name", "");
+        res.writeHead(302, { "Location": "/" });
+        res.end();
+    },
+    "/login /signin": {
+        "GET": function(req, res) {
+            bind.toFile("./content/templates/login.html", { errors: false }, function(data) {
+                res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
+                res.end(data);
+            });
+        },
+        "POST": function(req, res) {
+            var data = "";
+            req.on("data", function(chunk) { data += chunk; })
+            req.on("end", function() {
+                var form = query.parse(data);
+                console.dir(form);
+                
+                var errors = {
+                    "signin-error": false,
+                    "signin-email-error": false,
+                    "signin-no-email": false,
+                    "signin-email-unknown": false,
+                    "signin-no-password": false,
+                    "signin-password-error": false,
+                    "signin-password-incorrect": false,
+                    "signup-error": false,
+                    "signup-no-email": false,
+                    "signup-email-error": false,
+                    "signup-email-taken": false,
+                    "signup-no-password": false,
+                    "signup-password-mismatch": false
+                };
+                if("signin" in form) {
+                    errors["signin-no-email"] = (form["email"] == "");
+                    errors["signin-no-password"] = (form["password"] == "");
+                } else if("signup" in form) {
+                    errors["signup-no-email"] = (form["email"] == "");
+                    errors["signup-no-password"] = (form["password"] == "");
+                    errors["signup-password-mismatch"] = (form["password"] !== form["password2"]);
+                }
+                errors["signin-email-error"] = errors["signin-no-email"];
+                errors["signin-password-error"] = errors["signin-no-password"];
+                errors["signin-error"] = errors["signin-no-email"] || errors["signin-no-password"];
+                errors["signup-email-error"] = errors["signup-no-email"];
+                errors["signup-error"] = errors["signup-no-email"] ||
+                    errors["signup-no-password"] || errors["signup-password-mismatch"];
+                console.dir(errors);
+                
+                if(Object.keys(errors).some(function(key) { return errors[key]; })) {
+                    form.errors = errors;
+                    bind.toFile("./content/templates/login.html", form, function(data) {
+                        res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
+                        res.end(data);
+                    });
+                } else {
+                    users.view("/users/_design/app/_view/email", { key: form["email"] }, function(err, result) {
+                        console.dir(result);
+                        if("signin" in form) {
+                            errors["signin-email-unknown"] = (result.rows.length < 1);
+                            errors["signin-password-incorrect"] =
+                                !errors["signin-email-unknown"] && (form["password"] !== result.rows[0].value.password);
+                        } else if("signup" in form) {
+                            errors["signup-email-taken"] = (result.rows.length > 0);
+                        }
+                        errors["signin-email-error"] = errors["signin-email-unknown"];
+                        errors["signin-password-error"] = errors["signin-password-incorrect"];
+                        errors["signin-error"] = errors["signin-email-error"] || errors["signin-password-error"];
+                        errors["signup-email-error"] = errors["signup-email-taken"];
+                        errors["signup-error"] = errors["signup-email-error"];
+                        console.dir(errors);
+                        
+                        if(Object.keys(errors).every(function(key) { return !errors[key]; })) {
+                            if("signin" in form) {
+                                var cookies = new Cookies(req, res);
+                                cookies.set("user-id", result.rows[0].id);
+                                cookies.set("user-name", result.rows[0].value.name);
+                                res.writeHead(302, { "Location": "/" });
+                                res.end();
+                            } else if("signup" in form) {
+                                users.save({ _id: uuid(), email: form.email, password: form.password }, function(err, result) {
+                                    console.log("saving new user:");
+                                    console.dir(result);
+                                    var cookies = new Cookies(req, res);
+                                    cookies.set("user-id", result._id);
+                                    res.writeHead(302, { "Location": "/" });
+                                    res.end();
+                                });
+                            }
+                        } else {
+                            form.errors = errors;
+                            bind.toFile("./content/templates/login.html", form, function(data) {
+                                res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
+                                res.end(data);
+                            });
+                        }
+                    });
+                }
+            });
+        }
+    }
 });
 
 var server = http.createServer(route);
@@ -356,7 +463,7 @@ socket.on('connection', function(client){
             users.save(users[userId], function(err, result) {
                 if(err) { return console.error(err); }
                 
-                users[userId] = result;
+                users[userId]._rev = result.rev;
             });
         }
         if("join-game" in data) {

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/themes/excite-bike/jquery-ui.css" type="text/css" media="screen" />
+    <link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" />
+    <title>MathDash</title>
+    <style>
+        h2, h3 { margin: 0; padding: .1em .1em .2em .5em; }
+        .ui-widget-content { padding: 10px; }
+        .error { color: red; font-weight: bold; }
+        label { display: block; }
+        input { font-size: 1em; }
+        .signin-form, .signup-form { float: left; width: 46.5%; min-width: 250px; margin: 1.75%; }
+        .error-display, .error-message { display: none; }
+        .error-display.show { display: block; }
+        .error-message.show { display: list-item; }
+        .error-display { padding: .5em; margin: .5em 1em; }
+        .error-display ul { padding-left: 40px; margin: .5em 0 0; }
+    </style>
+</head>
+<body>
+<div id="main" class="ui-helper-clearfix">
+    <div class="signin-form">
+        <h2 class="ui-widget-header ui-corner-top">Sign in</h2>
+        <form method="post" class="ui-widget-content ui-corner-bottom">
+            <label class="email (: errors ~ [: signin-email-error ~ error :] :)">
+                Email Address: <input type="email" name="email" value="(: email :)"/>
+            </label>
+            <label class="password (: errors ~ [: signin-password-error ~ error :] :)">
+                Password: <input name="password" type="password"/>
+            </label>
+            <div class="error-display ui-state-error ui-corner-all (: errors ~ [: signin-error ~ show :] :)">
+                <h3 class="ui-widget-header ui-corner-all">An error occurred:</h3>
+                <ul>
+                    <li class="no-email error-message (: errors ~ [: signin-no-email ~ show :] :)">Please enter in your email address</li>
+                    (: errors ~ [: signin-email-unknown ~
+                        <li class="email-unknown error-message show">Sorry the email address you entered in is unknown</li>
+                    :] :)
+                    <li class="no-password error-message (: errors ~ [: signin-no-password ~ show :] :)">Please enter in your password</li>
+                    (: errors ~ [: signin-password-incorrect ~
+                        <li class="password-incorrect error-message show">Sorry the password you entered isn't correct</li>
+                    :] :)
+                </ul>
+            </div>
+            <input name="signin" type="submit" value="Submit" class="ui-button ui-widget ui-state-default ui-corner-all" />
+        </form>
+    </div>
+    <div class="signup-form">
+        <h2 class="ui-widget-header ui-corner-top">Sign up</h2>
+        <form method="post" class="ui-widget-content ui-corner-bottom">
+            <label class="email (: errors ~ [: signup-email-error ~ error :] :)">
+                Email Address: <input type="email" name="email" value="(: email :)"/>
+            </label>
+            <label class="password (: errors ~ [: signup-no-password ~ error :] :)">
+                Password: <input name="password" type="password"/>
+            </label>
+            <label class="password2 (: errors ~ [: signup-password-mismatch ~ error :] :)">
+                Password (again): <input name="password2" type="password"/>
+            </label>
+            <div class="error-display ui-state-error ui-corner-all (: errors ~ [: signup-error ~ show :] :)">
+                <h3 class="ui-widget-header ui-corner-all">An error has occurred:</h3>
+                <ul>
+                    <li class="no-email error-message (: errors ~ [: signup-no-email ~ show :] :)">Please enter in an email address</li>
+                    (: errors ~ [: signup-email-taken ~
+                        <li class="email-taken error-message show">Sorry address is already taken</li>
+                    :] :)
+                    <li class="no-password error-message (: errors ~ [: signup-no-password ~ show :] :)">Please enter a password</li>
+                    <li class="password-mismatch error-message (: errors ~ [: signup-password-mismatch ~ show :] :)">Passwords didn't match</li>
+                </ul>
+            </div>
+            <input name="signup" type="submit" value="Submit" class="ui-button ui-widget ui-state-default ui-corner-all" />
+        </form>
+    </div>
+</div>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/jquery-ui.min.js"></script>
+<script>
+    $(".ui-button").button();
+    $("form").submit(function(e) { // Handles both sign up and sign in forms
+        var $this = $(this);
+        var noEmail = ($this.find("[name=email]").val() === "");
+        var noPassword = ($this.find("[name=password]").val() === "");
+        var mismatchPassword = ($this.find("[name=password]").val() !== $this.find("[name=password2]").val());
+        
+        $this
+            .find(".error-message.show").removeClass("show").end()
+            .find(".no-email").toggleClass("show", noEmail).end()
+            .find(".email").toggleClass("error", noEmail).end()
+            .find(".no-password").toggleClass("show", noPassword).end()
+            .find(".password").toggleClass("error", noPassword).end()
+            .find(".password-mismatch").toggleClass("show", mismatchPassword).end()
+            .find(".password2").toggleClass("error", mismatchPassword);
+        
+        var hasErrors = ($this.find(".error-message.show").length > 0);
+        $this.find(".error-display").toggleClass("show", hasErrors);
+        if(hasErrors) { e.preventDefault(); }
+    });
+</script>
+</body>
+</html>
