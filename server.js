@@ -61,13 +61,8 @@ var route = bee.route({
                 res.end(data);
             });
         },
-        "POST": function(req, res) {
-            var data = "";
-            req.on("data", function(chunk) { data += chunk; })
-            req.on("end", function() {
-                var form = query.parse(data);
-                console.dir(form);
-                
+        "POST": (function() {
+            function findErrors(form, rows) {
                 var errors = {
                     "signin-error": false,
                     "signin-email-error": false,
@@ -97,40 +92,61 @@ var route = bee.route({
                 errors["signup-email-error"] = errors["signup-no-email"];
                 errors["signup-error"] = errors["signup-no-email"] ||
                     errors["signup-no-password"] || errors["signup-password-mismatch"];
-                console.dir(errors);
                 
-                if(Object.keys(errors).some(function(key) { return errors[key]; })) {
-                    form.errors = errors;
-                    bind.toFile("./content/templates/login.html", form, function(data) {
-                        res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
-                        res.end(data);
-                    });
-                } else {
-                    users.view("/users/_design/app/_view/email", { key: form["email"] }, function(err, result) {
-                        console.dir(result);
-                        if("signin" in form) {
-                            errors["signin-email-unknown"] = (result.rows.length < 1);
-                            errors["signin-password-incorrect"] =
-                                !errors["signin-email-unknown"] && (form["password"] !== result.rows[0].value.password);
-                        } else if("signup" in form) {
-                            errors["signup-email-taken"] = (result.rows.length > 0);
-                        }
-                        errors["signin-email-error"] = errors["signin-email-unknown"];
-                        errors["signin-password-error"] = errors["signin-password-incorrect"];
-                        errors["signin-error"] = errors["signin-email-error"] || errors["signin-password-error"];
-                        errors["signup-email-error"] = errors["signup-email-taken"];
-                        errors["signup-error"] = errors["signup-email-error"];
-                        console.dir(errors);
-                        
-                        if(Object.keys(errors).every(function(key) { return !errors[key]; })) {
-                            if("signin" in form) {
+                if(rows) {
+                    if("signin" in form) {
+                        errors["signin-email-unknown"] = (rows.length < 1);
+                        errors["signin-password-incorrect"] =
+                            !errors["signin-email-unknown"] && (form["password"] !== rows[0].value.password);
+                    } else if("signup" in form) {
+                        errors["signup-email-taken"] = (rows.length > 0);
+                    }
+                    errors["signin-email-error"] = errors["signin-email-unknown"];
+                    errors["signin-password-error"] = errors["signin-password-incorrect"];
+                    errors["signin-error"] = errors["signin-email-error"] || errors["signin-password-error"];
+                    errors["signup-email-error"] = errors["signup-email-taken"];
+                    errors["signup-error"] = errors["signup-email-error"];
+                }
+                
+                errors.count = Object.keys(errors).filter(function(key) { return errors[key]; }).length;
+                
+                console.dir(errors);
+                return errors;
+            }
+            
+            return function(req, res) {
+                var data = "";
+                req.on("data", function(chunk) { data += chunk; })
+                req.on("end", function() {
+                    var form = query.parse(data);
+                    console.dir(form);
+                    
+                    var errors = findErrors(form);
+                    if(errors.count > 0) {
+                        form.errors = errors;
+                        bind.toFile("./content/templates/login.html", form, function(data) {
+                            res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
+                            res.end(data);
+                        });
+                    } else {
+                        users.view("/users/_design/app/_view/email", { key: form["email"] }, function(err, result) {
+                            console.dir(result);
+                            errors = findErrors(form, result.rows);
+                            if(errors.count > 0) {
+                                form.errors = errors;
+                                bind.toFile("./content/templates/login.html", form, function(data) {
+                                    res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
+                                    res.end(data);
+                                });
+                            } else if("signin" in form) {
                                 var cookies = new Cookies(req, res);
                                 cookies.set("user-id", result.rows[0].id);
                                 cookies.set("user-name", result.rows[0].value.name);
                                 res.writeHead(302, { "Location": "/" });
                                 res.end();
                             } else if("signup" in form) {
-                                users.save({ _id: uuid(), email: form.email, password: form.password }, function(err, result) {
+                                var data = { _id: uuid(), email: form.email, password: form.password };
+                                users.save(data, function(err, result) {
                                     console.log("saving new user:");
                                     console.dir(result);
                                     var cookies = new Cookies(req, res);
@@ -139,17 +155,11 @@ var route = bee.route({
                                     res.end();
                                 });
                             }
-                        } else {
-                            form.errors = errors;
-                            bind.toFile("./content/templates/login.html", form, function(data) {
-                                res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
-                                res.end(data);
-                            });
-                        }
-                    });
-                }
-            });
-        }
+                        });
+                    }
+                });
+            };
+        })()
     }
 });
 
