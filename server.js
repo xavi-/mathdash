@@ -25,13 +25,8 @@ var route = bee.route({
         users.get(userId, function(err, result) {
             if(err) { // Unknown user
                 userId = uuid(); result = { "_id": userId, "name": cookies.get("user-name"), created: new Date() };
-                users.save(result, function(err, result) {
-                    if(err) { return console.error(err); }
-                    
-                    users[userId]._rev = result.rev;
-                });
+                users.save(result, function(err, result) { if(err) { return console.error(err); } });
             }
-            users[userId] = result;
             
             if(clients[userId]) { clients[userId].name = result.name; }
             
@@ -469,12 +464,14 @@ socket.on('connection', function(client){
             client.send(msg);
         }
         if("user-name" in data) {
-            users[userId].name = clients[userId].name = data["user-name"];
-            users.save(users[userId], function(err, result) {
-                if(err) { return console.error(err); }
-                
-                users[userId]._rev = result.rev;
-            });
+            clients[userId].name = data["user-name"];
+            
+            users.request(
+                "PUT",
+                "/users/_design/app/_update/setfield/" + userId + "?"
+                    + querystring.stringify({ "field": "name", "value": clients[userId] }),
+                function(err, result) { if(err) { return console.error(err); } }
+            );
         }
         if("join-game" in data) {
             if(curGame) { curGame.removePlayer(userId); }
