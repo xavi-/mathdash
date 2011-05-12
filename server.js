@@ -13,7 +13,8 @@ var CouchClient = require("couch-client");
 
 var TOTAL_SCORE = 100, MAX_GAME_TIME = 5 * 60 * 1000;
 
-var users = CouchClient("/users");
+var userdb = CouchClient("/users");
+var gamedb = CouchClient("/games");
 
 var route = bee.route({
     "r`^/css/(.*)$`": bee.staticDir("./content/css", { ".css": "text/css" }),
@@ -22,10 +23,10 @@ var route = bee.route({
         var cookies = new Cookies(req, res);
         var userId = cookies.get("user-id");
         
-        users.get(userId, function(err, result) {
+        userdb.get(userId, function(err, result) {
             if(err) { // Unknown user
                 userId = uuid(); result = { "_id": userId, "name": cookies.get("user-name"), created: new Date() };
-                users.save(result, function(err, result) { if(err) { return console.error(err); } });
+                userdb.save(result, function(err, result) { if(err) { return console.error(err); } });
             }
             
             if(clients[userId]) { clients[userId].name = result.name; }
@@ -124,7 +125,7 @@ var route = bee.route({
                             res.end(data);
                         });
                     } else {
-                        users.view("/users/_design/app/_view/email", { key: form["email"] }, function(err, result) {
+                        userdb.view("/users/_design/users/_view/email", { key: form["email"] }, function(err, result) {
                             console.dir(result);
                             errors = findErrors(form, result.rows);
                             if(errors.count > 0) {
@@ -141,7 +142,7 @@ var route = bee.route({
                                 res.end();
                             } else if("signup" in form) {
                                 var data = { _id: uuid(), email: form.email, password: form.password };
-                                users.save(data, function(err, result) {
+                                userdb.save(data, function(err, result) {
                                     console.log("saving new user:");
                                     console.dir(result);
                                     var cookies = new Cookies(req, res);
@@ -191,6 +192,8 @@ function Game() {
     event.EventEmitter.call(this);
     
     var players = {}, self = this;
+    
+    this.id = uuid();
     
     this.started = false;
     
@@ -274,8 +277,11 @@ function Game() {
             if(!p.gone && p.userId !== except) { p.client.send(msg); }
         });
     }
+    
+    Game.events.emit("create", this);
 }
 util.inherits(Game, event.EventEmitter);
+Game.events = new event.EventEmitter();
 
 
 var clients = {}, games = [];
@@ -289,7 +295,40 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
     }
 }, MAX_GAME_TIME);
 
-var findOpenGame = (function() {
+
+(function() { // Game Manager
+    function gameManager() {
+        var game = this, players = game.players;
+        
+        if(game.started) {
+            if(players.length === 0) { game.end(); }
+            if(players.every(function(p) { return p.finished; })) { game.end(); }
+            if(Date.now() - game.started > MAX_GAME_TIME) { game.end(); }
+        } else { // Game not started
+            if(players.length >= 2) {
+                
+                if(!game.startTimer) {
+                    game.startTimer = setTimeout(function() {
+                        game.start();
+                        game.startingAt = null;
+                        game.startTimer = null;
+                    }, 10000);
+                    game.startingAt = Date.now() + 10000;
+                    game.broadcast({ "game-starting": 9000 });
+                }
+            }
+        }
+    }
+    
+    Game.events.on("create", function(game) {
+        game.on("correct-answer", gameManager);
+        game.on("player-finished", gameManager);
+        game.on("player-added", gameManager);
+        game.on("player-removed", gameManager);
+    });
+})();
+
+(function() { // Relay game info to browser
     function gameStarted(game) {
         this.broadcast({ "game-started": game.started });
     }
@@ -343,54 +382,117 @@ var findOpenGame = (function() {
         this.broadcast({ "player-gone": [ { "id":  player.userId } ] }, player.userId);
     }
     
-    function gameManager() {
-        var game = this, players = game.players;
-        
-        if(game.started) {
-            if(players.length === 0) { game.end(); }
-            if(players.every(function(p) { return p.finished; })) { game.end(); }
-            if(Date.now() - game.started > MAX_GAME_TIME) { game.end(); }
-        } else { // Game not started
-            if(players.length >= 2) {
-                
-                if(!game.startTimer) {
-                    game.startTimer = setTimeout(function() {
-                        game.start();
-                        game.startingAt = null;
-                        game.startTimer = null;
-                    }, 10000);
-                    game.startingAt = Date.now() + 10000;
-                    game.broadcast({ "game-starting": 9000 });
-                }
-            }
-        }
-    }
-
-    return function findOpenGame() {
-        var openGame = games.filter(function(game) { return !game.started; })[0];
-        if(!openGame) {
-            openGame = new Game();
-            games.push(openGame);
-            
-            openGame.on("game-started", gameStarted);
-            openGame.on("game-ended", gameEnded);
-            openGame.on("new-question", newQuestion);
-            openGame.on("correct-answer", correctAnswer);
-            openGame.on("incorrect-answer", incorrectAnswer);
-            openGame.on("player-gone", playerGone);
-            openGame.on("player-finished", playerFinished);
-            openGame.on("player-added", playerAdded);
-            openGame.on("player-removed", playerRemoved);
-            
-            openGame.on("correct-answer", gameManager);
-            openGame.on("player-finished", gameManager);
-            openGame.on("player-added", gameManager);
-            openGame.on("player-removed", gameManager);
-        }
-        
-        return openGame
-    };
+    Game.events.on("create", function(game) {
+        game.on("game-started", gameStarted);
+        game.on("game-ended", gameEnded);
+        game.on("new-question", newQuestion);
+        game.on("correct-answer", correctAnswer);
+        game.on("incorrect-answer", incorrectAnswer);
+        game.on("player-gone", playerGone);
+        game.on("player-finished", playerFinished);
+        game.on("player-added", playerAdded);
+        game.on("player-removed", playerRemoved);
+    });
 })();
+
+(function() { // Persist game info
+    function save(game) {
+        if(game.db.savePending) { return; }
+        
+        if(game.db.saveInflight) { game.db.savePending = true; return; }
+        
+        process.nextTick(function() {
+            gamedb.save(game.db.data, function(err, result) {
+                if(err) { throw err; }
+                
+                game.db.data._rev = result._rev;
+                
+                game.db.saveInflight = false;
+                if(game.db.savePending) { game.db.savePending = false; save(game); }
+            });
+            game.db.savePending = false;
+            game.db.saveInflight = true;
+        });
+        game.db.savePending = true;
+    }
+    function logPlayerAction(game, player, info) {
+        var players = game.db.data.players;
+        var id = player.userId;
+        
+        players[id] = players[id] || [];
+        players[id].push(info);
+        
+        save(game);
+    }
+    
+    function gameStarted(game) {
+        game.db.data.started = new Date();
+        save(game);
+    }
+    function gameEnded(game) {
+        game.db.data.ended = new Date();
+        game.db.data.finalRank = game.players.sort(function(a, b) {
+            if(!a.finished && !b.finished) { return b.score - a.score; }
+            
+            if(!a.finished) { return 1; }
+            
+            if(!b.finished) { return -1; }
+            
+            return a.finished - b.finished;
+        }).map(function(p) { return p.userId; });
+        
+        save(game);
+    }
+    function newQuestion(player, question) {
+        logPlayerAction(this, player, { "new-question": { "question": question, "time": new Date() } });
+    }
+    function incorrectAnswer(player, answer) {
+        logPlayerAction(this, player, { "incorrect-answer": { "answer": answer, "time": new Date() } });
+    }
+    function correctAnswer(player, answer) {
+        logPlayerAction(this, player, { "correct-answer": { "answer": answer, "time": new Date() } });
+    }
+    function playerFinished(player) { logPlayerAction(this, player, { "finished": new Date() }); }
+    function playerAdded(player) { logPlayerAction(this, player, { "added": new Date() }); }
+    function playerRemoved(player) { logPlayerAction(this, player, { "removed": new Date() }); }
+    function playerGone(player) { logPlayerAction(this, player, { "gone": new Date() }); }
+    
+    Game.events.on("create", function(game) {
+        game.db = { savePending: false, saveInflight: false };
+        game.db.data = { _id: game.id, created: new Date(), players: {}, finalRank: [] };
+        
+        game.on("game-started", gameStarted);
+        game.on("game-ended", gameEnded);
+        game.on("new-question", newQuestion);
+        game.on("correct-answer", correctAnswer);
+        game.on("incorrect-answer", incorrectAnswer);
+        game.on("player-gone", playerGone);
+        game.on("player-finished", playerFinished);
+        game.on("player-added", playerAdded);
+        game.on("player-removed", playerRemoved);
+        
+        gamedb.save(game.db.data, function(err, result) {
+            if(err) { throw err; }
+            console.log("--- first game result: ")
+            console.dir(result);
+            game.db.data._rev = result._rev;
+            
+            game.db.saveInflight = false;
+            if(game.db.savePending) { game.db.savePending = false; save(game); }
+        });
+        game.db.saveInflight = true;
+    });
+})();
+
+function findOpenGame() {
+    var openGame = games.filter(function(game) { return !game.started; })[0];
+    if(!openGame) {
+        openGame = new Game();
+        games.push(openGame);
+    }
+    
+    return openGame
+}
 
 function reconnectLogic(userId, client, msg) {
     console.log("Force reconnect: " + userId);
@@ -466,10 +568,10 @@ socket.on('connection', function(client){
         if("user-name" in data) {
             clients[userId].name = data["user-name"];
             
-            users.request(
+            userdb.request(
                 "PUT",
-                "/users/_design/app/_update/setfield/" + userId + "?"
-                    + querystring.stringify({ "field": "name", "value": clients[userId] }),
+                "/users/_design/users/_update/setfield/" + userId + "?"
+                    + query.stringify({ "field": "name", "value": clients[userId].name }),
                 function(err, result) { if(err) { return console.error(err); } }
             );
         }
