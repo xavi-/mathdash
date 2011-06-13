@@ -35,7 +35,12 @@ var route = bee.route({
             cookies.set("user-name", result.name, { expires: new Date(2050, 11, 31) });
             bind.toFile(
                 "./content/templates/index.html",
-                { "user-id": userId, "total-score": TOTAL_SCORE, "user-name": result.name },
+                {
+                    "user-id": userId,
+                    "total-score": TOTAL_SCORE,
+                    "user-name": result.name,
+                    "logged-in?": !!result.email
+                },
                 function(data) {
                     res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
                     res.end(data);

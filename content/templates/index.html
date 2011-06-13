@@ -5,6 +5,11 @@
     <link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" />
     <title>MathDash</title>
     <style>
+        .sign-up-container {
+            position: absolute;
+            top: 0;
+            right: 0;
+        }
         #game-container {
             position: relative;
             overflow: hidden;
@@ -148,6 +153,10 @@
 <body>
 <div id="main">
     <h1>Welcome to MathDash!</h1>
+    <div class="sign-up-container">(: if[logged-in?] ~
+        [: then ~ <a href="/signout">Sign out</a> :]
+        [: else ~ <a href="/signin">Sign in / Sign up</a> :]
+    :)</div>
     <div id="game-container" class="md-state-connect">
         <div class="ui-widget-content ui-corner-all">
             <ul id="opponents" class="ui-widget-content ui-corner-top">
