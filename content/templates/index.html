@@ -142,6 +142,12 @@
         .answer-correct { background: green; }
         .answer-incorrect { background: red; }
         
+        #answer::-webkit-outer-spin-button,
+        #answer::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
         .name-dialog { display: none; }
         .name-dialog input { width: 200px; }
         .name-dialog.error input { border: 2px solid red; }
@@ -174,7 +180,7 @@
                 </div></li>
             </ul>
             <div id="problem-container" class="ui-corner-bottom">
-                <span id="problem">?? + ??</span> = <input id="answer" type="text" autocomplete="off" disabled="true" />
+                <span id="problem">?? + ??</span> = <input id="answer" type="number" autocomplete="off" disabled="true" />
             </div>
         </div>
         <div class="status-display ui-state-highlight">
