@@ -219,8 +219,8 @@
     <span class="error-text">Please enter your name.</span>
 </div>
 <script type="text/javascript" src="http://ajax.cdnjs.com/ajax/libs/json2/20110223/json2.js" defer="true" async="true"></script>
-<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
-<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/jquery-ui.min.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
     var userId = "(: user-id :)", total = "(: total-score :)", userName = "(: user-name :)";
@@ -433,11 +433,10 @@
         }
     }
     
-    var socket = new io.Socket();
-    socket.connect();
+    var socket = io.connect();
     socket.on("connect", function() {
         window.console && console.log("connected");
-        socket.send({ setup: { "user-id": userId } });
+        socket.json.send({ setup: { "user-id": userId } });
     });
     socket.on("disconnect", function() {
         disconnectScreen();
@@ -452,24 +451,24 @@
         e.preventDefault();
         if(!userName) { showNameDialog(); return; }
         
-        socket.send({ "user-name": userName, "join-game": true });
+        socket.json.send({ "user-name": userName, "join-game": true });
     });
     
     $(".start-button").click(function(e) {
         e.preventDefault();
-        socket.send({ "start-game": true });
+        socket.json.send({ "start-game": true });
     });
     
     $(".leave-button").click(function(e) {
         e.preventDefault();
-        socket.send({ "leave-game": true });
+        socket.json.send({ "leave-game": true });
     });
     
     $("#answer").keypress(function(e) {
         if(e.which !== $.ui.keyCode.ENTER) { return; }
         
         e.preventDefault();
-        socket.send({ answer: $(this).val() });
+        socket.json.send({ answer: $(this).val() });
     });
 </script>
 </body>

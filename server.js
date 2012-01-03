@@ -4,7 +4,6 @@ var net = require("net");
 var repl = require("repl");
 var event = require("events");
 var util = require("util");
-var io = require("socket.io");
 var bee = require("beeline");
 var bind = require("bind");
 var Cookies = require("cookies");
@@ -279,7 +278,7 @@ function Game() {
     
     this.broadcast = function(msg, except) {
         this.players.forEach(function(p) {
-            if(!p.gone && p.userId !== except) { p.client.send(msg); }
+            if(!p.gone && p.userId !== except) { p.client.json.send(msg); }
         });
     }
     
@@ -346,18 +345,18 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
         this.broadcast({ "game-ended": { "time": game.ended, "ranks": ranks } });
     }
     function newQuestion(player, question) {
-        player.client.send({ "new-question": question });
+        player.client.json.send({ "new-question": question });
     }
     function incorrectAnswer(player, answer) {
-        player.client.send({ "incorrect-answer": answer });
+        player.client.json.send({ "incorrect-answer": answer });
     }
     function correctAnswer(player, answer) {
-        player.client.send({ "correct-answer": { "answer": answer, "score": player.score } });
+        player.client.json.send({ "correct-answer": { "answer": answer, "score": player.score } });
         this.broadcast({ "score-update": { "id": player.userId, "score": player.score } }, player.userId);
     }
     function playerFinished(player) {
         var rank = this.players.filter(function(p) {return p.finished < player.finished }).length;
-        player.client.send({ "finished-game": { "rank": rank } });
+        player.client.json.send({ "finished-game": { "rank": rank } });
         
         this.broadcast({ "player-finished": [ { "id": player.userId, "rank": rank } ] }, player.userId);
     }
@@ -370,7 +369,7 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
         if(this.startingAt > Date.now()) {
             msg["game-starting"] = this.startingAt - Date.now();
         }
-        player.client.send(msg);
+        player.client.json.send(msg);
         
         this.broadcast({
             "player-added": {
@@ -379,11 +378,11 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
         }, player.userId);
     }
     function playerRemoved(player) {
-        player.client.send({ "game-left": true });
+        player.client.json.send({ "game-left": true });
         this.broadcast({ "player-removed": player.userId }, player.userId);
     }
     function playerGone(player) {
-        player.client.send({ "game-left": true });
+        player.client.json.send({ "game-left": true });
         this.broadcast({ "player-gone": [ { "id":  player.userId } ] }, player.userId);
     }
     
@@ -549,8 +548,8 @@ function reconnectLogic(userId, client, msg) {
     }
 }
 
-var socket = io.listen(server);
-socket.on('connection', function(client){
+var io = require("socket.io").listen(server);
+io.sockets.on('connection', function(client){
     var curGame, userId;
     
     console.log("A new client!!: sessionId: " + client.sessionId);
@@ -568,7 +567,7 @@ socket.on('connection', function(client){
                 curGame = clients[userId].curGame;
             }
             
-            client.send(msg);
+            client.json.send(msg);
         }
         if("user-name" in data) {
             clients[userId].name = data["user-name"];
