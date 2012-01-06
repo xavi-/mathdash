@@ -1,4 +1,5 @@
 var http = require("http");
+var url = require("url");
 var query = require("querystring");
 var net = require("net");
 var repl = require("repl");
@@ -8,14 +9,36 @@ var bee = require("beeline");
 var bind = require("bind");
 var Cookies = require("cookies");
 var uuid = require("node-uuid");
+var moment = require("moment");
 var CouchClient = require("couch-client");
 
 var TOTAL_SCORE = 100, MAX_GAME_TIME = 5 * 60 * 1000;
 
-var userdb = CouchClient("/users");
-var gamedb = CouchClient("/games");
+var userdb = CouchClient("http://whoyou:yeah@127.0.0.1:5984/users");
+var gamedb = CouchClient("http://whoyou:yeah@127.0.0.1:5984/games");
 
 var route = bee.route({
+    "`preprocess`": [
+        (function() {
+            function sendHtml(data) {
+                this.writeHead(200, { "Content-Length": data.length,
+                                      "Content-Type": "text/html; charset=utf-8" });
+                this.end(data);
+            }
+            
+            function sendJson(json) {
+                var data = JSON.stringify(json);
+                this.writeHead(200, { "Content-Length": data.length,
+                                      "Content-Type": "application/json; charset=utf-8" });
+                this.end(data);
+            }
+            
+            return function(req, res) {
+                res.html = sendHtml;
+                res.json = sendJson;
+            };
+        })()
+    ],
     "r`^/css/(.*)$`": bee.staticDir("./content/css", { ".css": "text/css" }),
     "/libraries/pie.htc": bee.staticFile("./libraries/PIE/PIE.htc", "text/x-component"),
     "/ /index.html": function(req, res) {
@@ -157,6 +180,92 @@ var route = bee.route({
                             }
                         });
                     }
+                });
+            };
+        })()
+    },
+    "/account /my-account": {
+        "GET": function(req, res) {
+            var cookies = new Cookies(req, res);
+            var userId = cookies.get("user-id");
+            var ranks = { "-1": "Not Finished", 0: "1st", 1: "2nd", 2: "3rd", 3: "4th" };
+            gamedb.view("/games/_design/games/_view/users", { key: userId }, function(err, result) {
+                var info = {
+                    errors: false,
+                    games:
+                        result.rows
+                            .sort(function(a, b) { return new Date(a.value.started) - new Date(b.value.started); })
+                            .map(function(r, idx) {
+                                return {
+                                    id: r.id,
+                                    index: idx + 1,
+                                    started: moment(r.value.started).fromNow(),
+                                    time: r.value.started,
+                                    rank: ranks[r.value.ranks.indexOf(userId)]
+                                };
+                            }).reverse()
+                };
+                userdb.get(userId, function(err, result) {// Should maybe start using Step?
+                    info.name = result.name;
+                    info.email = result.email;
+                    console.dir(info);
+                    bind.toFile("./content/templates/account.html", info, function(data) {
+                        res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
+                        res.end(data);
+                    });
+                });
+            });
+        },
+        "POST": (function() {
+            function findErrors(userId, form, rows) { console.dir(rows);
+                var errors = {
+                    "no-name": (form["name"] == ""),
+                    "no-email": !form["email"],
+                    "email-taken": (rows && rows.length > 0 && rows[0].id !== userId),
+                    "email-malformed": (!!form["email"] && form["email"].indexOf("@") < 0),
+                    "password-mismatch": (!!form["password"] && form["password"] !== form["password2"])
+                }
+                
+                errors.count = Object.keys(errors).filter(function(key) { return errors[key]; }).length;
+                
+                return errors;
+            }
+            
+            return function(req, res) {
+                var cookies = new Cookies(req, res);
+                var userId = cookies.get("user-id");
+                var data = "";
+                req.on("data", function(chunk) { data += chunk; })
+                req.on("end", function() {
+                    gamedb.view("/games/_design/games/_view/users", { key: userId }, function(err, result) {
+                        var form = query.parse(data);
+                        var errors = findErrors(userId, form);
+                        if(errors.count > 0) { return res.json({ errors: errors }); }
+                        
+                        userdb.view(
+                            "/users/_design/users/_view/email",
+                            { key: form["email"] },
+                            function(err, result) {
+                                errors = findErrors(userId, form, result.rows);
+                                if(errors.count > 0) { return res.json({ errors: errors }); }
+                                
+                                var newVals = {
+                                    email: form["email"],
+                                    name: form["name"]
+                                };
+                                if(form["password"].length > 0) { newVals["password"] = form["password"]; }
+                                
+                                var updateUrl =
+                                    url.parse(url.resolve("/users/_design/users/_update/setfield/", userId));
+                                updateUrl.query = { "fields": JSON.stringify(newVals) };
+                                userdb.request("PUT", url.format(updateUrl), function(err, results) {
+                                    if(err) { console.error(err); res.json({ errors: { "db-error": true } }); }
+                                    
+                                    res.json({ ok: true });
+                                });
+                            }
+                        );
+                    });
                 });
             };
         })()
@@ -575,7 +684,7 @@ io.sockets.on('connection', function(client){
             userdb.request(
                 "PUT",
                 "/users/_design/users/_update/setfield/" + userId + "?"
-                    + query.stringify({ "field": "name", "value": clients[userId].name }),
+                    + query.stringify({ "field": JSON.stringify({ "name": clients[userId].name }) }),
                 function(err, result) { if(err) { return console.error(err); } }
             );
         }
@@ -618,8 +727,8 @@ console.log("Listening on port 8007");
 
 
 net.createServer(function (socket) {
-  var r = repl.start("mathdash> ", socket);
-  r.context.clients = clients;
-  r.context.games = games;
-  r.context.socket = socket;
+    var r = repl.start("mathdash> ", socket);
+    r.context.clients = clients;
+    r.context.games = games;
+    r.context.socket = socket;
 }).listen("/tmp/mathdash-repl-sock");

@@ -1,5 +1,8 @@
 function(doc, req) {
-    var field = req.query.field, value = req.query.value;
-    doc[field] = value;
-    return [ doc, JSON.stringify({ "field": field, "value": value }) ];
+    var fields = JSON.parse(req.query.fields);
+    
+    for(var field in fields) {
+        doc[field] = fields[field];
+    }
+    return [ doc, JSON.stringify({ "fields": fields }) ];
 }
