@@ -481,7 +481,7 @@
     });
     socket.on("disconnect", function() {
         disconnectScreen();
-        setTimeout(function() { socket.connect(); connectScreen(); }, 500);
+        setTimeout(function() { connectScreen(); }, 500);
     });
     socket.on("message", handleMessage);
     connectScreen();

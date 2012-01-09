@@ -12,7 +12,7 @@ var uuid = require("node-uuid");
 var moment = require("moment");
 var CouchClient = require("couch-client");
 
-var TOTAL_SCORE = 100, MAX_GAME_TIME = 5 * 60 * 1000;
+var TOTAL_SCORE = 150, MAX_GAME_TIME = 5 * 60 * 1000;
 
 var userdb = CouchClient("http://whoyou:yeah@127.0.0.1:5984/users");
 var gamedb = CouchClient("http://whoyou:yeah@127.0.0.1:5984/games");
@@ -53,8 +53,10 @@ var route = bee.route({
             }
             
             if(!users[userId]) { users[userId] = {}; }
+            users[userId].id = userId;
             users[userId].name = result.name;
             users[userId].icon = result.icon || "blue";
+            users[userId].rank = result.rank || 0;
             
             cookies.set("user-id", userId, { expires: new Date(2050, 11, 31) });
             cookies.set("user-name", result.name, { expires: new Date(2050, 11, 31) });
@@ -278,14 +280,114 @@ var route = bee.route({
 
 var server = http.createServer(route);
 
-function Questions(client) {
+function grade1() {
+    if(Math.random() < .6) { // Addition
+        var num1 = Math.floor(10 * Math.random()), num2 = Math.floor(10 * Math.random());
+        return { question: num1 + " + " + num2, answer: num1 + num2 };
+    } else { // Subtracion
+        var num1 = Math.floor(10 * Math.random()), num2 = Math.floor(num1 * Math.random());
+        return { question: num1 + " - " + num2, answer: num1 - num2 };
+    }
+}
+function grade2() {
+    var rnd = Math.random();
+    if(rnd < .333) { // Addition
+        var num1 = Math.floor(15 * Math.random()), num2 = Math.floor(15 * Math.random());
+        return { question: num1 + " + " + num2, answer: num1 + num2 };
+    } else if(rnd < .666) { // Subtracion
+        var num1 = Math.floor(20 * Math.random()), num2 = Math.floor(num1 * Math.random());
+        return { question: num1 + " - " + num2, answer: num1 - num2 };
+    } else {
+        var num1 = Math.floor(6 * Math.random());
+        var num2 = Math.floor(4 * Math.random());
+        var num3 = Math.floor(6 * Math.random());
+        return { question: num1 + " + " + num2 + " + " + num3, answer: num1 + num2 + num3 };
+    }
+}
+
+function grade3() {
+    var rnd = Math.random();
+    if(rnd < .25) { // Addition
+        var num1 = Math.floor(20 * Math.random()), num2 = Math.floor(20 * Math.random());
+        return { question: num1 + " + " + num2, answer: num1 + num2 };
+    } else if(rnd < .5) { // Subtracion
+        var num1 = Math.floor(30 * Math.random()), num2 = Math.floor(num1 * Math.random());
+        return { question: num1 + " - " + num2, answer: num1 - num2 };
+    } else if(rnd < .8) { // Multiply
+        var num1 = Math.floor(8 * Math.random());
+        var num2 = Math.floor(8 * Math.random());
+        return { question: num1 + " * " + num2, answer: num1 * num2 };
+    } else { // 3 Add
+        var num1 = Math.floor(8 * Math.random());
+        var num2 = Math.floor(8 * Math.random());
+        var num3 = Math.floor(8 * Math.random());
+        return { question: num1 + " + " + num2 + " + " + num3, answer: num1 + num2 + num3 };
+    }
+}
+
+function grade4() {
+    var rnd = Math.random();
+    if(rnd < .15) { // Addition
+        var num1 = Math.floor(30 * Math.random()), num2 = Math.floor(30 * Math.random());
+        return { question: num1 + " + " + num2, answer: num1 + num2 };
+    } else if(rnd < .35) { // Subtracion
+        var num1 = Math.floor(40 * Math.random()), num2 = Math.floor(num1 * Math.random());
+        return { question: num1 + " - " + num2, answer: num1 - num2 };
+    } else if(rnd < .55) { // Multiply
+        var num1 = Math.floor(10 * Math.random()), num2 = Math.floor(10 * Math.random());
+        return { question: num1 + " * " + num2, answer: num1 * num2 };
+    } else if(rnd < .7) { // Multiply
+        var num1 = Math.floor(6 * Math.random()) + 4, num2 = Math.floor(8 * Math.random()) + 2;
+        return { question: num1 + " * " + num2, answer: num1 * num2 };
+    } else if(rnd < .85) {
+        var num1 = Math.floor(10 * Math.random());
+        var num2 = Math.floor(10 * Math.random());
+        var num3 = Math.floor(10 * Math.random());
+        return { question: num1 + " + " + num2 + " + " + num3, answer: num1 + num2 + num3 };
+    } else { // Divide
+        var num1 = Math.floor(10 * Math.random()), num2 = Math.floor(10 * Math.random());
+        var ans = num1 * num2;
+        return { question: ans + " / " + num1, answer: num2 };
+    }
+}
+
+function grade5() {
+    var rnd = Math.random();
+    if(rnd < .15) { // Addition
+        var num1 = Math.floor(50 * Math.random()), num2 = Math.floor(50 * Math.random());
+        return { question: num1 + " + " + num2, answer: num1 + num2 };
+    } else if(rnd < .35) { // Subtracion
+        var num1 = Math.floor(60 * Math.random()), num2 = Math.floor(num1 * Math.random());
+        return { question: num1 + " - " + num2, answer: num1 - num2 };
+    } else if(rnd < .55) { // Multiply
+        var num1 = Math.floor(12 * Math.random()), num2 = Math.floor(12 * Math.random());
+        return { question: num1 + " * " + num2, answer: num1 * num2 };
+    } else if(rnd < .7) { // Multiply
+        var num1 = Math.floor(8 * Math.random()) + 4, num2 = Math.floor(10 * Math.random()) + 2;
+        return { question: num1 + " * " + num2, answer: num1 * num2 };
+    } else if(rnd < .85) {
+        var num1 = Math.floor(12 * Math.random());
+        var num2 = Math.floor(12 * Math.random());
+        var num3 = Math.floor(12 * Math.random());
+        return { question: num1 + " + " + num2 + " + " + num3, answer: num1 + num2 + num3 };
+    } else { // Divide
+        var num1 = Math.floor(12 * Math.random()), num2 = Math.floor(12 * Math.random());
+        var ans = num1 * num2;
+        return { question: ans + " / " + num1, answer: num2 };
+    }
+}
+
+function Questions(user) {
     event.EventEmitter.call(this);
     
     var curQuestion = "", curAnswer = "";
     
     var generate = function(curQuestion, curAnswer) {
-        var num1 = Math.floor(10 * Math.random()), num2 = Math.floor(10 * Math.random());
-        return { question: num1 + " + " + num2, answer: num1 + num2 };
+        if(user.rank => 24) { return grade5(); }
+        else if(user.rank => 18) { return grade4(); }
+        else if(user.rank => 12) { return grade3(); }
+        else if(user.rank => 6) { return grade2(); }
+        else { return grade1(); }
     };
     
     this.current = function() { return curQuestion; };
@@ -357,7 +459,7 @@ function Game() {
     this.addPlayer = function(userId, client) {
         if(userId in players) { return; }
         
-        var player = { userId: userId, client: client, score: 0, questions: new Questions(client) };
+        var player = { userId: userId, client: client, score: 0, questions: new Questions(users[userId]) };
         player.questions
             .on("new-question", function(question) { self.emit("new-question", player, question); });
         players[userId] = player;
@@ -579,6 +681,30 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
     function playerRemoved(player) { logPlayerAction(this, player, { "removed": new Date() }); }
     function playerGone(player) { logPlayerAction(this, player, { "gone": new Date() }); }
     
+    var points = {
+        "4": { "0": 6, "1": 3, "2": 0, "3": -3 },
+        "3": { "0": 6, "1": 3, "2": 0 },
+        "2": { "0": 6, "1": 1 }
+    }
+    function updatePlayerRank(player) {
+        var userId = player.userId, players = this.players, placed = 0;
+        for(var i = 0; i < players.length; i++) {
+            if(players[i].userId === userId) { continue; }
+            if(!players[i].finished) { continue; }
+            if(players[i].finished > player.finished) { continue; }
+            placed += 1;
+        }
+        
+        users[userId].rank += points[players.length][placed];
+        console.log("user rank: id: " + userId + "; rank: " + users[userId].rank);
+        userdb.request(
+            "PUT",
+            "/users/_design/users/_update/setfield/" + userId + "?"
+                + query.stringify({ "fields": JSON.stringify({ "rank": users[userId].rank }) }),
+            function(err, result) { if(err) { return console.error(err); } }
+        );
+    }
+    
     Game.events.on("create", function(game) {
         game.db = { savePending: false, saveInflight: false };
         game.db.data = { _id: game.id, created: new Date(), players: {}, finalRank: [] };
@@ -590,6 +716,7 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
         game.on("incorrect-answer", incorrectAnswer);
         game.on("player-gone", playerGone);
         game.on("player-finished", playerFinished);
+        game.on("player-finished", updatePlayerRank);
         game.on("player-added", playerAdded);
         game.on("player-removed", playerRemoved);
         
@@ -682,7 +809,7 @@ io.sockets.on('connection', function(client){
             
             // Handle case where server resets and page doesn't refresh
             // Consider going to DB in this case.  Should be rare
-            if(!users[userId]) { users[userId] = {}; console.log("Strange case"); }
+            if(!users[userId]) { users[userId] = { id: userId }; console.log("Strange case"); }
             users[userId].client = client;
             if(users[userId].connected) {
                 reconnectLogic(userId, client, msg);
