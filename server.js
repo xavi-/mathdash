@@ -52,10 +52,9 @@ var route = bee.route({
                 userdb.save(result, function(err, result) { if(err) { return console.error(err); } });
             }
             
-            if(clients[userId]) {
-                clients[userId].name = result.name;
-                clients[userId].icon = result.icon || "blue";
-            }
+            if(!users[userId]) { users[userId] = {}; }
+            users[userId].name = result.name;
+            users[userId].icon = result.icon || "blue";
             
             cookies.set("user-id", userId, { expires: new Date(2050, 11, 31) });
             cookies.set("user-name", result.name, { expires: new Date(2050, 11, 31) });
@@ -402,7 +401,7 @@ util.inherits(Game, event.EventEmitter);
 Game.events = new event.EventEmitter();
 
 
-var clients = {}, games = [];
+var users = {}, games = [];
 
 setInterval(function() { // Game reaper, doesn't take care of all memory leaks
     for(var i = 0; i < games.length; i++) { // Don't user filter -- makes games unavailble to repl
@@ -477,8 +476,8 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
     function playerAdded(player) {
         var players = {};
         this.players.forEach(function(player) {
-            var client = clients[player.userId];
-            players[player.userId] = { "score": player.score, "name": client.name, "icon": client.icon };
+            var user = users[player.userId];
+            players[player.userId] = { "score": player.score, "name": user.name, "icon": user.icon };
         });
         var msg = { "game-joined": { "players": players } };
         if(this.startingAt > Date.now()) {
@@ -486,9 +485,9 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
         }
         player.client.json.send(msg);
         
-        var client = clients[player.userId];
+        var user = users[player.userId];
         this.broadcast({
-            "player-added": { "id": player.userId, "score": player.score, "name": client.name, "icon": client.icon }
+            "player-added": { "id": player.userId, "score": player.score, "name": user.name, "icon": user.icon }
         }, player.userId);
     }
     function playerRemoved(player) {
@@ -620,21 +619,21 @@ function findOpenGame() {
 function reconnectLogic(userId, client, msg) {
     console.log("Force reconnect: " + userId);
     
-    if(clients[userId].disconnectTimer) { clearTimeout(clients[userId].disconnectTimer); }
-    clients[userId].disconnectTimer = null;
-    clients[userId].client = client;
+    if(users[userId].disconnectTimer) { clearTimeout(users[userId].disconnectTimer); }
+    users[userId].disconnectTimer = null;
+    users[userId].client = client;
     
     msg["reconnected"] = true;
     
-    var curGame = clients[userId].curGame;
+    var curGame = users[userId].curGame;
     if(curGame) {
         var player = curGame.getPlayer(userId);
         player.client = client;
         
         var players = {};
         curGame.players.forEach(function(player) {
-            var client = clients[player.userId];
-            players[player.userId] = { "score": player.score, "name": client.name, "icon": client.icon };
+            var user = users[player.userId];
+            players[player.userId] = { "score": player.score, "name": user.name, "icon": user.icon };
         });
         msg["game-joined"] = { players: players };
         if(curGame.startingAt > Date.now()) {
@@ -681,37 +680,41 @@ io.sockets.on('connection', function(client){
             var msg = { "setup-done": true };
             userId = data["setup"]["user-id"];
             
-            if(!clients[userId]) { clients[userId] = { curGame: null, client: client }; }
-            else {
+            // Handle case where server resets and page doesn't refresh
+            // Consider going to DB in this case.  Should be rare
+            if(!users[userId]) { users[userId] = {}; console.log("Strange case"); }
+            users[userId].client = client;
+            if(users[userId].connected) {
                 reconnectLogic(userId, client, msg);
-                curGame = clients[userId].curGame;
+                curGame = users[userId].curGame;
             }
+            users[userId].connected = true;
             
             client.json.send(msg);
         }
         if("user-name" in data) {
-            clients[userId].name = data["user-name"];
+            users[userId].name = data["user-name"];
             
             userdb.request(
                 "PUT",
                 "/users/_design/users/_update/setfield/" + userId + "?"
-                    + query.stringify({ "fields": JSON.stringify({ "name": clients[userId].name }) }),
+                    + query.stringify({ "fields": JSON.stringify({ "name": users[userId].name }) }),
                 function(err, result) { if(err) { return console.error(err); } }
             );
         }
         if("change-icon" in data) {
-            clients[userId].icon = data["change-icon"];
+            users[userId].icon = data["change-icon"];
             userdb.request(
                 "PUT",
                 "/users/_design/users/_update/setfield/" + userId + "?"
-                    + query.stringify({ "fields": JSON.stringify({ "icon": clients[userId].icon }) }),
+                    + query.stringify({ "fields": JSON.stringify({ "icon": users[userId].icon }) }),
                 function(err, result) { if(err) { return console.error(err); } }
             );
-            curGame.emit("player-icon-changed", curGame.getPlayer(userId), clients[userId].icon);
+            curGame.emit("player-icon-changed", curGame.getPlayer(userId), users[userId].icon);
         }
         if("join-game" in data) {
             if(curGame) { curGame.removePlayer(userId); }
-            clients[userId].curGame = curGame = findOpenGame();
+            users[userId].curGame = curGame = findOpenGame();
             curGame.addPlayer(userId, client);
         }
         if("start-game" in data) {
@@ -719,7 +722,7 @@ io.sockets.on('connection', function(client){
         }
         if("leave-game" in data) {
             curGame.removePlayer(userId);
-            clients[userId].curGame = curGame = null;
+            users[userId].curGame = curGame = null;
         }
         if("answer" in data) {
             curGame.answered(userId, data["answer"]);
@@ -727,14 +730,14 @@ io.sockets.on('connection', function(client){
     });
     client.on('disconnect', function(){
         if(!userId) { return; } // Handle case where setup isn't done
-        if(clients[userId].client.sessionId !== client.sessionId) { return; }
-        if(clients[userId].client.connected) { return; }
+        if(users[userId].client.sessionId !== client.sessionId) { return; }
+        if(users[userId].client.connected) { return; }
         
-        clients[userId].disconnectTimer = setTimeout(function() {
+        users[userId].disconnectTimer = setTimeout(function() {
             console.log("Really disconnected: " + userId);
             if(curGame) { curGame.removePlayer(userId); }
-            clients[userId] = null;
-            delete clients[userId];
+            users[userId] = null;
+            delete users[userId];
             userId = null;
             curGame = null;
         }, 10000);
@@ -749,7 +752,7 @@ console.log("Listening on port 8007");
 
 net.createServer(function (socket) {
     var r = repl.start("mathdash> ", socket);
-    r.context.clients = clients;
+    r.context.users = users;
     r.context.games = games;
     r.context.socket = socket;
 }).listen("/tmp/mathdash-repl-sock");
