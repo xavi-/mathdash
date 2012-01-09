@@ -40,6 +40,7 @@ var route = bee.route({
         })()
     ],
     "r`^/css/(.*)$`": bee.staticDir("./content/css", { ".css": "text/css" }),
+    "r`^/cars/(.*)$`": bee.staticDir("./content/cars", { ".png": "image/png" }),
     "/libraries/pie.htc": bee.staticFile("./libraries/PIE/PIE.htc", "text/x-component"),
     "/ /index.html": function(req, res) {
         var cookies = new Cookies(req, res);
@@ -51,7 +52,10 @@ var route = bee.route({
                 userdb.save(result, function(err, result) { if(err) { return console.error(err); } });
             }
             
-            if(clients[userId]) { clients[userId].name = result.name; }
+            if(clients[userId]) {
+                clients[userId].name = result.name;
+                clients[userId].icon = result.icon || "blue";
+            }
             
             cookies.set("user-id", userId, { expires: new Date(2050, 11, 31) });
             cookies.set("user-name", result.name, { expires: new Date(2050, 11, 31) });
@@ -61,6 +65,7 @@ var route = bee.route({
                     "user-id": userId,
                     "total-score": TOTAL_SCORE,
                     "user-name": result.name,
+                    "user-icon": result.icon || "blue",
                     "logged-in?": !!result.email
                 },
                 function(data) {
@@ -472,7 +477,8 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
     function playerAdded(player) {
         var players = {};
         this.players.forEach(function(player) {
-            players[player.userId] = { "score": player.score, "name": clients[player.userId].name };
+            var client = clients[player.userId];
+            players[player.userId] = { "score": player.score, "name": client.name, "icon": client.icon };
         });
         var msg = { "game-joined": { "players": players } };
         if(this.startingAt > Date.now()) {
@@ -480,10 +486,9 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
         }
         player.client.json.send(msg);
         
+        var client = clients[player.userId];
         this.broadcast({
-            "player-added": {
-                "id": player.userId, "score": player.score, "name": clients[player.userId].name
-            }
+            "player-added": { "id": player.userId, "score": player.score, "name": client.name, "icon": client.icon }
         }, player.userId);
     }
     function playerRemoved(player) {
@@ -493,6 +498,10 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
     function playerGone(player) {
         player.client.json.send({ "game-left": true });
         this.broadcast({ "player-gone": [ { "id":  player.userId } ] }, player.userId);
+    }
+    function playerIconChanged(player, icon) {
+        player.client.json.send({ "icon-change": true });
+        this.broadcast({ "player-icon-changed": { "id":  player.userId, "icon": icon } }, player.userId);
     }
     
     Game.events.on("create", function(game) {
@@ -505,6 +514,7 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
         game.on("player-finished", playerFinished);
         game.on("player-added", playerAdded);
         game.on("player-removed", playerRemoved);
+        game.on("player-icon-changed", playerIconChanged);
     });
 })();
 
@@ -623,7 +633,8 @@ function reconnectLogic(userId, client, msg) {
         
         var players = {};
         curGame.players.forEach(function(player) {
-            players[player.userId] = { "score": player.score, "name": clients[player.userId].name };
+            var client = clients[player.userId];
+            players[player.userId] = { "score": player.score, "name": client.name, "icon": client.icon };
         });
         msg["game-joined"] = { players: players };
         if(curGame.startingAt > Date.now()) {
@@ -684,9 +695,19 @@ io.sockets.on('connection', function(client){
             userdb.request(
                 "PUT",
                 "/users/_design/users/_update/setfield/" + userId + "?"
-                    + query.stringify({ "field": JSON.stringify({ "name": clients[userId].name }) }),
+                    + query.stringify({ "fields": JSON.stringify({ "name": clients[userId].name }) }),
                 function(err, result) { if(err) { return console.error(err); } }
             );
+        }
+        if("change-icon" in data) {
+            clients[userId].icon = data["change-icon"];
+            userdb.request(
+                "PUT",
+                "/users/_design/users/_update/setfield/" + userId + "?"
+                    + query.stringify({ "fields": JSON.stringify({ "icon": clients[userId].icon }) }),
+                function(err, result) { if(err) { return console.error(err); } }
+            );
+            curGame.emit("player-icon-changed", curGame.getPlayer(userId), clients[userId].icon);
         }
         if("join-game" in data) {
             if(curGame) { curGame.removePlayer(userId); }

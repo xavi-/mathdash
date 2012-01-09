@@ -88,23 +88,45 @@
         .player-car {
             position: relative;
             width: 80px;
-            height: 50px;
-            background: blue;
+            height: 60px;
+            text-align: center;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            -o-user-select: none;
+            user-select: none;
         }
         .md-state-disconnect .player-car,
         .md-state-connect .player-car,
         .md-state-join .player-car {
-            background-color: gray;
             opacity: .4;
         }
         .md-state-finish .player-car.gone,
         .md-state-end .player-car.gone,
         .md-state-play .player-car.gone {
-            opacity: .6; color: DarkBlue;
+            opacity: .6;
         }
-        .player-car.mine { background: green; }
-        .player-car .car-rank {
-            margin-left: 5px;
+        .player-car.mine { color: blue; }
+        .player-car .car-rank,
+        .player-car .car-score {
+            text-align: center;
+            position: absolute;
+            z-index: 1;
+            display: block;
+            width: 100%;
+            color: black;
+            line-height: 60px;
+            top: 7px;
+            font-size: 26px;
+            text-shadow: 0px 0px 8px white;
+        }
+        
+        .car-icon {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
         }
         
         #problem-container {
@@ -167,16 +189,24 @@
         <div class="ui-widget-content ui-corner-all">
             <ul id="opponents" class="ui-widget-content ui-corner-top">
                 <li><div class="player-car empty">
-                    <span class="car-name">???</span><br/><span class="car-score"></span><span class="car-rank"></span>
+                    <span class="car-name">???</span>
+                    </span><span class="car-rank"></span>
+                    <img class="car-icon" src="/cars/black.png"/>
                 </div></li>
                 <li><div class="player-car empty">
-                    <span class="car-name">???</span><br/><span class="car-score"></span><span class="car-rank"></span>
+                    <span class="car-name">???</span>
+                    <span class="car-rank"></span>
+                    <img class="car-icon" src="/cars/black.png"/>
                 </div></li>
                 <li><div class="player-car empty">
-                    <span class="car-name">???</span><br/><span class="car-score"></span><span class="car-rank"></span>
+                    <span class="car-name">???</span>
+                    <span class="car-rank"></span>
+                    <img class="car-icon" src="/cars/black.png"/>
                 </div></li>
                 <li><div class="player-car empty">
-                    <span class="car-name">???</span><br/><span class="car-score"></span><span class="car-rank"></span>
+                    <span class="car-name">???</span>
+                    <span class="car-rank"></span>
+                    <img class="car-icon" src="/cars/black.png"/>
                 </div></li>
             </ul>
             <div id="problem-container" class="ui-corner-bottom">
@@ -197,7 +227,7 @@
             <div class="join-message">
                 <ul>
                     <li>Reason 1</li>
-                    <li>Reason 2</li>
+                    <li>Have Fun</li>
                     <li>Become a mental math pro</li>
                 </ul>
             </div>
@@ -223,7 +253,8 @@
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
-    var userId = "(: user-id :)", total = "(: total-score :)", userName = "(: user-name :)";
+    var userId = "(: user-id :)", total = "(: total-score :)";
+    var userName = "(: user-name :)", userIcon = "(: user-icon :)";
     
     var states =
         "md-state-disconnect md-state-connect md-state-join md-state-wait md-state-starting md-state-play md-state-finish md-state-end";
@@ -321,6 +352,7 @@
                 .find(".car-name").text("???").end()
                 .find(".car-score").text("").end()
                 .find(".car-rank").text("").end()
+                .find(".car-icon").attr("src", "/cars/black.png").end()
                 .find(".player-car")
                     .css("left", "0")
                     .addClass("empty")
@@ -333,12 +365,16 @@
             $car.attr("data-id", id)
                 .find(".car-name").text(function(idx, text) { return options.name || text }).end()
                 .find(".car-score").text(function(idx, text) { return options.score || text }).end()
+                .find(".car-icon").attr("src", function(idx, attr) {
+                    if(!options.icon) { return attr; }
+                    return "/cars/" + options.icon + ".png";
+                }).end()
                 .find(".player-car")
                     .each(function() {
                         if(!options.score) { return; }
                         $(this).animate({ "left": ((options.score * 100) / total) + "%" })
                     })
-                    .toggleClass("mine", userId === id)
+                    .toggleClass("mine change-icon", userId === id)
                     .removeClass("empty");
         },
         gone: function(id) {
@@ -431,6 +467,11 @@
         if("player-removed" in data) {
             cars.remove(data["player-removed"]);
         }
+        if("player-icon-changed" in data) {
+            var id = data["player-icon-changed"].id;
+            var icon = data["player-icon-changed"].icon;
+            cars.update(id, { icon: icon });
+        }
     }
     
     var socket = io.connect();
@@ -470,6 +511,26 @@
         e.preventDefault();
         socket.json.send({ answer: $(this).val() });
     });
+    
+    (function() {
+        var nextIcon = { "red": "green", "green": "blue", "blue": "red" };
+        
+        var timer;
+        function sendIconUpdate() {
+            socket.json.send({ "change-icon": userIcon });
+            timer = null;
+        }
+        
+        $(".change-icon").live("click", function(e) {
+            e.preventDefault();
+            
+            if(timer) { clearTimeout(timer); }
+            timer = setTimeout(sendIconUpdate, 500);
+            
+            userIcon = nextIcon[userIcon];
+            cars.update(userId, { icon: userIcon });
+        });
+    })();
 </script>
 </body>
 </html>
