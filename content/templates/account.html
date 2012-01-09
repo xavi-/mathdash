@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/themes/excite-bike/jquery-ui.css" type="text/css" media="screen" />
+	<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" />
+	<title>MathDash</title>
+	<style>	
+		.sign-up-container {
+			position: absolute;
+			top: 0;
+			right: 0;
+		}
+		h1 a { color: black; text-decoration: none; }
+		h2, h3 { margin: 0; padding: .1em .1em .2em .5em; }
+		.ui-widget-content { padding: 10px; }
+		.error { color: red; font-weight: bold; }
+		label { display: block; }
+		input { font-size: 1em; }
+		.saved-display, .error-display, .error-message { display: none; }
+		.error-display.show { display: block; }
+		.error-message.show { display: list-item; }
+		.error-display { padding: .5em; margin: .5em 1em; }
+		.error-display ul { padding-left: 40px; margin: .5em 0 0; }
+		.saved-display { padding: .25em; margin: .5em; font-weight: bold; font-size: 1.2em; }
+	</style>
+</head>
+<body>
+<div id="main" class="ui-helper-clearfix">
+	<h1><a href="/">Welcome to MathDash!</a></h1>
+	<div class="sign-up-container"><a href="/signout">Sign out</a></div>
+	<div id="account-tabs">
+		<ul>
+			<li><a href="#info">My Info</a></li>
+			<li><a href="#history">Game History</a></li>
+		</ul>
+		<div id="info">
+			<form method="post" action="/account">
+				<label class="name">Name: <input type="text" name="name" value="(: name :)" /></label>
+				<label class="email">Email: <input type="email" name="email" value="(: email :)" /></label>
+				<label class="password">password: <input type="password" name="password" value="" /></label>
+				<label class="password2">password (again): <input type="password" name="password2" value="" /></label>
+				<div class="error-display ui-state-error ui-corner-all">
+					<h3 class="ui-widget-header ui-corner-all">An error occurred:</h3>
+					<ul>
+						<li class="no-name error-message">Please enter in your nick name</li>
+						<li class="no-email error-message">Please enter in your email address</li>
+						<li class="email-taken error-message">Sorry the email address you entered in is taken</li>
+						<li class="email-malformed error-message">Please enter a valid email address</li>
+						<li class="no-password error-message">Please enter your new password</li>
+						<li class="password-mismatch error-message">Passwords didn't match</li>
+					</ul>
+				</div>
+				<input type="submit" class="ui-button" value="Save" />
+				<span class="saved-display ui-state-highlight ui-corner-all">Saved</span>
+			</form>
+		</div>
+		<div id="history">
+			<ul>
+				(: games ~ <li>Game [: index :]: Was played <time datetime="[:time:]">[: started :]</time>. Placed: <span class="rank-[:rank:]">[: rank :]</span></li> :)
+			</ul>
+		</div>
+	</div>
+</div>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js"></script>
+<script>
+	$("#account-tabs").tabs();
+	$(".ui-button").button();
+	
+	function showErrors(form, errors) {
+		var hiliteEmail = !!errors["no-email"] || !!errors["email-taken"] || !!errors["email-malformed"];
+		
+		$(form)
+			.find(".no-name").toggleClass("show", !!errors["no-name"]).end()
+			.find(".name").toggleClass("error", !!errors["no-name"]).end()
+			.find(".no-email").toggleClass("show", !!errors["no-email"]).end()
+			.find(".email-taken").toggleClass("show", !!errors["email-taken"]).end()
+			.find(".email-malformed").toggleClass("show", !!errors["email-malformed"]).end()
+			.find(".email").toggleClass("error", hiliteEmail).end()
+			.find(".password-mismatch").toggleClass("show", !!errors["mismatch-password"]).end()
+			.find(".password2").toggleClass("error", !!errors["mismatch-password"]);
+		
+		var hasErrors = ($(form).find(".error-message.show").length > 0);
+		$(form).find(".error-display").toggleClass("show", hasErrors);
+		return hasErrors;
+	}
+	
+	$("form").submit(function(e) {
+		e.preventDefault();
+		
+		var $form = $(this);
+		$form.find(".saved-message").hide();
+		
+		var errors = {
+			"no-name": ($form.find("[name=name]").val() === ""),
+			"no-email": ($form.find("[name=email]").val() === ""),
+			"email-malformed": ($form.find("[name=email]").val().indexOf("@") < 0),
+			"mismatch-password": ($form.find("[name=password]").val() !== $form.find("[name=password2]").val())
+		};
+		var hasErrors = showErrors($form, errors);
+		if(hasErrors) { return; }
+		
+		$.post(
+			$form.attr("action"),
+			$form.serialize(),
+			function(data) {
+				if(data.errors) {
+					return showErrors($form, data.errors);
+				}
+				
+				$form.find(".saved-display").fadeIn("fast").delay(2000).fadeOut();
+			},
+			"json"
+		);
+	});
+</script>
+</body>
+</html>
