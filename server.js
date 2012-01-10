@@ -1,3 +1,6 @@
+var fs = require("fs");
+var settings = JSON.parse(fs.readFileSync("./settings.json"));
+
 var http = require("http");
 var url = require("url");
 var query = require("querystring");
@@ -14,8 +17,8 @@ var CouchClient = require("couch-client");
 
 var TOTAL_SCORE = 150, MAX_GAME_TIME = 5 * 60 * 1000;
 
-var userdb = CouchClient("http://whoyou:yeah@127.0.0.1:5984/users");
-var gamedb = CouchClient("http://whoyou:yeah@127.0.0.1:5984/games");
+var userdb = CouchClient("http://" + settings.couchdb.auth + "@127.0.0.1:5984/users");
+var gamedb = CouchClient("http://" + settings.couchdb.auth + "@127.0.0.1:5984/games");
 
 var route = bee.route({
     "`preprocess`": [
@@ -383,10 +386,10 @@ function Questions(user) {
     var curQuestion = "", curAnswer = "";
     
     var generate = function(curQuestion, curAnswer) {
-        if(user.rank => 24) { return grade5(); }
-        else if(user.rank => 18) { return grade4(); }
-        else if(user.rank => 12) { return grade3(); }
-        else if(user.rank => 6) { return grade2(); }
+        if(user.rank >= 24) { return grade5(); }
+        else if(user.rank >= 18) { return grade4(); }
+        else if(user.rank >= 12) { return grade3(); }
+        else if(user.rank >= 6) { return grade2(); }
         else { return grade1(); }
     };
     
@@ -872,7 +875,11 @@ io.sockets.on('connection', function(client){
         console.log("About to disconnect: " + userId);
     });
 });
-
+if(settings.environment === "prod") {
+    io.set("log level", 1);
+    io.enable("browser client minification");
+    io.enable("browser client etag");
+}
 server.listen(8007);
 console.log("Listening on port 8007");
 
