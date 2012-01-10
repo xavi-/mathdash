@@ -1,0 +1,24 @@
+{
+  "author": "Xavi <xavi.rmz@gmail.com> (http://xavi.co)",
+  "name": "mathdash",
+  "description": "Math speed game",
+  "version": "0.0.5",
+  "homepage": "http://mathdash.net",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Xavi-/mathdash.git"
+  },
+  "engines": {
+    "node": "~0.4.10"
+  },
+  "dependencies": {
+    "beeline": "",
+    "bind": "",
+    "cookies": "",
+    "couch-client": "",
+    "moment": "",
+    "node-uuid": "",
+    "socket.io": ""
+  },
+  "devDependencies": {}
+}
