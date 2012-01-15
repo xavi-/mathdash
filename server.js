@@ -42,8 +42,8 @@ var route = bee.route({
             };
         })()
     ],
-    "r`^/css/(.*)$`": bee.staticDir("./content/css", { ".css": "text/css" }),
-    "r`^/cars/(.*)$`": bee.staticDir("./content/cars", { ".png": "image/png" }),
+    "r`^/css/(.*)$`": bee.staticDir("./static/css", { ".css": "text/css" }),
+    "r`^/cars/(.*)$`": bee.staticDir("./static/img/cars", { ".png": "image/png" }),
     "/libraries/pie.htc": bee.staticFile("./libraries/PIE/PIE.htc", "text/x-component"),
     "/ /index.html": function(req, res) {
         var cookies = new Cookies(req, res);
@@ -64,7 +64,7 @@ var route = bee.route({
             cookies.set("user-id", userId, { expires: new Date(2050, 11, 31) });
             cookies.set("user-name", result.name, { expires: new Date(2050, 11, 31) });
             bind.toFile(
-                "./content/templates/index.html",
+                "./templates/index.html",
                 {
                     "user-id": userId,
                     "total-score": TOTAL_SCORE,
@@ -88,7 +88,7 @@ var route = bee.route({
     },
     "/login /signin": {
         "GET": function(req, res) {
-            bind.toFile("./content/templates/login.html", { errors: false }, function(data) {
+            bind.toFile("./templates/login.html", { errors: false }, function(data) {
                 res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
                 res.end(data);
             });
@@ -156,7 +156,7 @@ var route = bee.route({
                     var errors = findErrors(form);
                     if(errors.count > 0) {
                         form.errors = errors;
-                        bind.toFile("./content/templates/login.html", form, function(data) {
+                        bind.toFile("./templates/login.html", form, function(data) {
                             res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
                             res.end(data);
                         });
@@ -166,7 +166,7 @@ var route = bee.route({
                             errors = findErrors(form, result.rows);
                             if(errors.count > 0) {
                                 form.errors = errors;
-                                bind.toFile("./content/templates/login.html", form, function(data) {
+                                bind.toFile("./templates/login.html", form, function(data) {
                                     res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
                                     res.end(data);
                                 });
@@ -218,7 +218,7 @@ var route = bee.route({
                     info.name = result.name;
                     info.email = result.email;
                     console.dir(info);
-                    bind.toFile("./content/templates/account.html", info, function(data) {
+                    bind.toFile("./templates/account.html", info, function(data) {
                         res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
                         res.end(data);
                     });
