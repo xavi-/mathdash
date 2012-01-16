@@ -457,6 +457,7 @@ function Game() {
                 this.emit("player-finished", player);
             }
         } else {
+            player.wrong += 1;
             this.emit("incorrect-answer", player, answer);
         }
     };
@@ -464,7 +465,7 @@ function Game() {
     this.addPlayer = function(userId, client) {
         if(userId in players) { return; }
         
-        var player = { userId: userId, client: client, score: 0, questions: new Questions(users[userId]) };
+        var player = { userId: userId, client: client, score: 0, questions: new Questions(users[userId]), wrong: 0 };
         player.questions
             .on("new-question", function(question, answer) { self.emit("new-question", player, question, answer); });
         players[userId] = player;
@@ -736,7 +737,7 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
             placed += 1;
         }
         
-        users[userId].rank += points[players.length][placed];
+        users[userId].rank += points[players.length][placed] - player.wrong / 2;
         console.log("user rank: id: " + userId + "; rank: " + users[userId].rank);
         userdb.request(
             "PUT",
