@@ -15,7 +15,7 @@ var uuid = require("node-uuid");
 var moment = require("moment");
 var CouchClient = require("couch-client");
 
-var TOTAL_SCORE = 150, MAX_GAME_TIME = 5 * 60 * 1000;
+var TOTAL_SCORE = 150, MAX_GAME_TIME = 5 * 60 * 1000, AI_COUNT = 20;
 
 var userdb = CouchClient("http://" + settings.couchdb.auth + "@127.0.0.1:5984/users");
 var gamedb = CouchClient("http://" + settings.couchdb.auth + "@127.0.0.1:5984/games");
@@ -401,7 +401,7 @@ function Questions(user) {
         curQuestion = content.question;
         curAnswer = content.answer;
         
-        this.emit("new-question", curQuestion);
+        this.emit("new-question", curQuestion, curAnswer);
     };
     
     this.isCorrect = function(answer) {
@@ -416,6 +416,8 @@ function Game() {
     var players = {}, self = this;
     
     this.id = uuid();
+    
+    this.created = Date.now();
     
     this.started = false;
     
@@ -464,7 +466,7 @@ function Game() {
         
         var player = { userId: userId, client: client, score: 0, questions: new Questions(users[userId]) };
         player.questions
-            .on("new-question", function(question) { self.emit("new-question", player, question); });
+            .on("new-question", function(question, answer) { self.emit("new-question", player, question, answer); });
         players[userId] = player;
         
         self.emit("player-added", player);
@@ -523,22 +525,21 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
         var game = this, players = game.players;
         
         if(game.started) {
-            if(players.length === 0) { game.end(); }
-            if(players.every(function(p) { return p.finished; })) { game.end(); }
-            if(Date.now() - game.started > MAX_GAME_TIME) { game.end(); }
-        } else { // Game not started
-            if(players.length >= 2) {
-                
-                if(!game.startTimer) {
-                    game.startTimer = setTimeout(function() {
-                        game.start();
-                        game.startingAt = null;
-                        game.startTimer = null;
-                    }, 10000);
-                    game.startingAt = Date.now() + 10000;
-                    game.broadcast({ "game-starting": 9000 });
-                }
-            }
+            if(players.length === 0) { return game.end(); }
+            if(players.every(function(p) { return p.finished; })) { return game.end(); }
+            if(Date.now() - game.started > MAX_GAME_TIME) { return game.end(); }
+            
+            return;
+        }
+        
+        if(players.length >= 2 && !game.startTimer) {
+            game.startTimer = setTimeout(function() {
+                game.start();
+                game.startingAt = null;
+                game.startTimer = null;
+            }, 10000);
+            game.startingAt = Date.now() + 10000;
+            game.broadcast({ "game-starting": 9500 });
         }
     }
     
@@ -547,6 +548,43 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
         game.on("player-finished", gameManager);
         game.on("player-added", gameManager);
         game.on("player-removed", gameManager);
+    });
+})();
+
+(function() { // AI Manager
+    var AIs = JSON.parse(fs.readFileSync("./static/ai-players.json"));
+    AIs.forEach(function(ai) { users[ai.id] = ai; });
+    
+    function randomAnswerTime() { return 2500 + (Math.random() * 2000 - 1000); }
+    
+    function addAIPlayer(game) {
+        var id = "AI" + Math.floor(Math.random() * AI_COUNT);
+        game.addPlayer(id, { json: { send: function() {} } });
+        
+        var curAnswer;
+        function answerQuestion() {
+            if(game.getPlayer(id).finished) { return; }
+            
+            game.answered(id, curAnswer);
+            
+            setTimeout(answerQuestion, randomAnswerTime());
+        }
+        game.on("game-started", function() {
+            setTimeout(answerQuestion, randomAnswerTime());
+        });
+        game.on("new-question", function(player, question, answer) {
+            if(player.userId !== id) { return; }
+            
+            curAnswer = answer;
+        });
+    }
+    
+    Game.events.on("create", function(game) {
+        game.on("game-starting", function() {
+            clearTimeout(game.addAIPlayerTimer);
+            game.addAIPlayerTimer = null;
+        });
+        game.addAIPlayerTimer = setTimeout(function() { addAIPlayer(game); }, 8000);
     });
 })();
 
