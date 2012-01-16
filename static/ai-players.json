@@ -1,0 +1,122 @@
+[
+	{
+		"id": "AI0",
+		"name": "James",
+		"rank": 0,
+		"icon": "green"
+	},
+	{
+		"id": "AI1",
+		"name": "John",
+		"rank": 0,
+		"icon": "red"
+	},
+	{
+		"id": "AI2",
+		"name": "Robert",
+		"rank": 0,
+		"icon": "green"
+	},
+	{
+		"id": "AI3",
+		"name": "Michael",
+		"rank": 0,
+		"icon": "red"
+	},
+	{
+		"id": "AI4",
+		"name": "William",
+		"rank": 0,
+		"icon": "green"
+	},
+	{
+		"id": "AI5",
+		"name": "David",
+		"rank": 0,
+		"icon": "red"
+	},
+	{
+		"id": "AI6",
+		"name": "Richard",
+		"rank": 0,
+		"icon": "blue"
+	},
+	{
+		"id": "AI7",
+		"name": "Charles",
+		"rank": 0,
+		"icon": "green"
+	},
+	{
+		"id": "AI8",
+		"name": "Joseph",
+		"rank": 0,
+		"icon": "red"
+	},
+	{
+		"id": "AI9",
+		"name": "Thomas",
+		"rank": 0,
+		"icon": "red"
+	},
+	{
+		"id": "AI10",
+		"name": "Mary",
+		"rank": 0,
+		"icon": "red"
+	},
+	{
+		"id": "AI11",
+		"name": "Patricia",
+		"rank": 0,
+		"icon": "red"
+	},
+	{
+		"id": "AI12",
+		"name": "Linda",
+		"rank": 0,
+		"icon": "green"
+	},
+	{
+		"id": "AI13",
+		"name": "Barbara",
+		"rank": 0,
+		"icon": "green"
+	},
+	{
+		"id": "AI14",
+		"name": "Elizabeth",
+		"rank": 0,
+		"icon": "red"
+	},
+	{
+		"id": "AI15",
+		"name": "Jennifer",
+		"rank": 0,
+		"icon": "green"
+	},
+	{
+		"id": "AI16",
+		"name": "Maria",
+		"rank": 0,
+		"icon": "blue"
+	},
+	{
+		"id": "AI17",
+		"name": "Susan",
+		"rank": 0,
+		"icon": "blue"
+	},
+	{
+		"id": "AI18",
+		"name": "Margaret",
+		"rank": 0,
+		"icon": "blue"
+	},
+	{
+		"id": "AI19",
+		"name": "Dorothy",
+		"rank": 0,
+		"icon": "red"
+	}
+]
