@@ -17,7 +17,7 @@
         
         #main .ui-state-highlight .ui-button-text { color: white; }
         
-        .join-button, .start-button, .leave-button, .play-again-button,
+        .join-button, .start-button, .leave-button, .play-again-button, .no-play-again-button,
         .disconnect-message, .connect-message, .wait-message, 
         .starting-message, .join-message, .finish-message, .end-message
         { display: none; }
@@ -61,8 +61,8 @@
         .md-state-wait .wait-message { display: block; }
         .md-state-wait .start-button, .md-state-wait .leave-button { display: inline-block; font-size: .9em; }
         .md-state-starting .starting-message { display: block; font-size: 2em; line-height: 80px; }
-        .md-state-finish .play-again-button, .md-state-end .play-again-button { display: inline-block; }
-        .play-again-button { font-size: .9em; }
+        .md-state-finish .play-again-button, .md-state-end .no-play-again-button { display: inline-block; }
+        .no-play-again-button, .play-again-button { font-size: .9em; }
         
         .md-state-finish .finish-message { display: block; }
         .md-state-end .end-message { display: block; }
@@ -235,12 +235,13 @@
                 You've finshed the race.  You got <span class="rank"></span> place.
             </div>
             <div class="end-message">
-                Game over.  You got <span class="rank"></span> place.
+                Game over.  You got <span class="rank"></span> place. New game in <span class="new-game-count-down"></span>...
             </div>
             <a class="join-button" href="#">Join Game</a>
             <a class="start-button" href="#">Start Game</a>
             <a class="leave-button" href="#">Leave Game</a>
             <a class="play-again-button" href="#">Play Again</a>
+            <a class="no-play-again-button" href="#">Don't Play Again</a>
         </div>
     </div>
 </div>
@@ -289,22 +290,24 @@
     
     var places = [ "1st", "2nd", "3rd", "4th" ];
     function finishScreen(rank) {
+        if($("#game-container").hasClass("md-state-end")) { return; }
+        
         $("#game-container").removeClass(states).addClass("md-state-finish");
         $(".status-display")
             .addClass("ui-state-highlight ui-corner-bottom")
             .css("top", $("#problem-container").position().top)
-            .find(".finish-message .rank").text(places[rank]);
+            .find(".finish-message .rank").text(places[rank]).data("rank", rank);
     }
     function endScreen(ranks) {
         $("#game-container").removeClass(states).addClass("md-state-end");
         $(".status-display")
             .addClass("ui-state-highlight ui-corner-bottom")
             .css("top", $("#problem-container").position().top)
-            .find(".end-message .rank").text(places[ranks[userId]]);
+            .find(".end-message .rank").text(places[ranks[userId]]).data("rank", ranks[userId]);
     }
     
-    function showStartingCountDown(time) {
-        $(".starting-count-down").text(Math.round(time / 1000));
+    function showStartingCountDown(time, elem) {
+        $(elem).text(Math.round(time / 1000));
         
         if(time <= 0) { return; }
         
@@ -312,7 +315,7 @@
         setTimeout(function() {
             var now = (new Date()).getTime();
             var elapse = now - then;
-            showStartingCountDown(time - elapse);
+            showStartingCountDown(time - elapse, elem);
         }, Math.min(1000, time));
     }
     
@@ -403,7 +406,7 @@
             cars.update(player.id, player);
         }
         if("game-starting" in data) {
-            showStartingCountDown(data["game-starting"]);
+            showStartingCountDown(data["game-starting"], ".starting-count-down");
             startingScreen();
         }
         if("game-started" in data) {
@@ -443,6 +446,10 @@
             $("#problem").text("?? + ??");
             $("#answer").attr("disabled", "true");
             endScreen(data["game-ended"].ranks);
+            autoPlayTimer = setTimeout(function() {
+                $(".play-again-button").click();
+            }, 8000);
+            showStartingCountDown(8000, ".new-game-count-down");
         }
         if("finished-game" in data) {
             $("#problem").text("?? + ??");
@@ -493,6 +500,15 @@
         if(!userName) { showNameDialog(); return; }
         
         socket.json.send({ "user-name": userName, "join-game": true });
+    });
+    
+    var autoPlayTimer;
+    $(".no-play-again-button").click(function(e) {
+        e.preventDefault();
+        
+        clearTimeout(autoPlayTimer);
+        $("#game-container").removeClass("md-state-end");
+        finishScreen($(".end-message .rank").data("rank"));
     });
     
     $(".start-button").click(function(e) {
