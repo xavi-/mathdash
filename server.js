@@ -380,13 +380,64 @@ function grade5() {
     }
 }
 
+function grade6() {
+    var rnd = Math.random();
+    if(rnd < .10) { // Addition
+        var num1 = Math.floor(50 * Math.random()), num2 = Math.floor(50 * Math.random());
+        return { question: num1 + " + " + num2, answer: num1 + num2 };
+    } else if(rnd < .15) { // Subtracion
+        var num1 = Math.floor(60 * Math.random()), num2 = Math.floor(num1 * Math.random());
+        return { question: num1 + " - " + num2, answer: num1 - num2 };
+    } else if(rnd < .25) { // Multiply
+        var num1 = Math.floor(12 * Math.random()), num2 = Math.floor(12 * Math.random());
+        return { question: num1 + " * " + num2, answer: num1 * num2 };
+    } else if(rnd < .35) { // Divide
+        var num1 = Math.floor(11 * Math.random()) + 1, num2 = Math.floor(11 * Math.random()) + 1;
+        var ans = num1 * num2;
+        return { question: ans + " / " + num1, answer: num2 };
+    } else if(rnd < .45) { // 101 * any number
+        var num1 = Math.floor(90 * Math.random()) + 10;
+        return { question: "101 * " + num1, answer: num1 * 101 };
+    } else if(rnd < .65) { // 50 * any number
+        var num1 = Math.floor(90 * Math.random()) + 5;
+        return { question: "50 * " + num1, answer: num1 * 50 };
+    } else if(rnd < .85) { // 25 * any number
+        var num1 = Math.floor(90 * Math.random()) + 5;
+        return { question: "25 * " + num1, answer: num1 * 25 };
+    } else { // 11 * any number
+        var num1 = Math.floor(90 * Math.random()) + 5;
+        return { question: "11 * " + num1, answer: num1 * 11 };
+    }
+}
+
+function grade7() {
+    var rnd = Math.random();
+    if(rnd < .06) { // Ones place add to 10, same tens place
+        var tens = Math.floor(10 * Math.random()), ones = Math.floor(10 * Math.random());
+        var num1 = tens * 10 + ones, num2 = tens * 10 + (10 - ones);
+        return { question: num1 + " * " + num2, answer: num1 * num2 };
+    } else if(rnd < .12) { // Two numbers near 100 (but less than)
+        var ones1 = Math.floor(10 * Math.random()), ones2 = Math.floor(10 * Math.random());
+        var num1 = 100 - ones1, num2 = 100 - ones2;
+        return { question: num1 + " * " + num2, answer: num1 * num2 };
+    } else if(rnd < .18) { // Two numbers near 100 (but less then)
+        var ones1 = Math.floor(10 * Math.random()), ones2 = Math.floor(10 * Math.random());
+        var num1 = 100 + ones1, num2 = 100 + ones2;
+        return { question: num1 + " * " + num2, answer: num1 * num2 };
+    } else {
+        return grade6();
+    }
+}
+
 function Questions(user) {
     event.EventEmitter.call(this);
     
     var curQuestion = "", curAnswer = "";
     
     var generate = function(curQuestion, curAnswer) {
-        if(user.rank >= 24) { return grade5(); }
+        if(user.rank >= 36) { return grade7(); }
+        else if(user.rank >= 30) { return grade6(); }
+        else if(user.rank >= 24) { return grade5(); }
         else if(user.rank >= 18) { return grade4(); }
         else if(user.rank >= 12) { return grade3(); }
         else if(user.rank >= 6) { return grade2(); }
@@ -725,8 +776,8 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
     
     var points = {
         "4": { "0": 6, "1": 3, "2": 0, "3": -3 },
-        "3": { "0": 6, "1": 3, "2": 0 },
-        "2": { "0": 6, "1": 1 }
+        "3": { "0": 6, "1": 2, "2": -2 },
+        "2": { "0": 6, "1": -1 }
     }
     function updatePlayerRank(player) {
         var userId = player.userId, players = this.players, placed = 0;
