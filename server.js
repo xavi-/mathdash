@@ -45,6 +45,20 @@ var route = bee.route({
     "r`^/css/(.*)$`": bee.staticDir("./static/css", { ".css": "text/css" }),
     "r`^/cars/(.*)$`": bee.staticDir("./static/img/cars", { ".png": "image/png" }),
     "/libraries/pie.htc": bee.staticFile("./libraries/PIE/PIE.htc", "text/x-component"),
+    "/teacher-feedback": (function() {
+        var fd = fs.createWriteStream("./feedback.txt", { flags: "a+" });
+
+        return function(req, res) {
+            var data = "";
+            req.on("data", function(chunk) { data += chunk; });
+            req.on("end", function() {
+                var form = query.parse(data);
+                var content = "\n\n--------\nfeedback: " + form.feedback + "\nemail: " + form.email + "\n";
+                fd.write(content);
+                res.json({ error: false });
+            });
+        };
+    })(),
     "/ /index.html": function(req, res) {
         var cookies = new Cookies(req, res);
         var userId = cookies.get("user-id");
