@@ -269,6 +269,20 @@
     var userId = "(: user-id :)", total = "(: total-score :)";
     var userName = "(: user-name :)", userIcon = "(: user-icon :)";
     
+    function showToolTip() {
+        if($(".tool-tip").length > 0) { return; }
+        if($(".player-car.mine").length === 0) { return; }
+
+        $("<div class='ui-widget-content ui-state-highlight ui-corner-all tool-tip'/>")
+            .text("Click your car to change its color.")
+            .appendTo("body")
+            .position({ my: "left top", at: "left bottom", of: ".player-car.mine", offset: "-25 7"})
+            .click(function(e) {
+                e.preventDefault();
+                $(this).remove();
+            });
+    }
+
     var states =
         "md-state-disconnect md-state-connect md-state-join md-state-wait md-state-starting md-state-play md-state-finish md-state-end";
     function disconnectScreen() {
@@ -282,22 +296,26 @@
     function joinScreen() {
         $("#game-container").removeClass(states).addClass("md-state-join");
         $(".status-display").addClass("ui-state-highlight ui-corner-bottom").css("top", "");
+        $(".tool-tip").remove();
     }
     function waitScreen() {
         $("#game-container").removeClass(states).addClass("md-state-wait");
         $(".status-display")
             .addClass("ui-state-highlight ui-corner-bottom")
             .css("top", $("#problem-container").position().top);
+        (: is-new-user? ~ showToolTip(); :)
     }
     function startingScreen() {
         $("#game-container").removeClass(states).addClass("md-state-starting");
         $(".status-display")
             .addClass("ui-state-highlight ui-corner-bottom")
             .css("top", $("#problem-container").position().top);
+        (: is-new-user? ~ showToolTip(); :)
     }
     function playScreen() {
         $("#game-container").removeClass(states).addClass("md-state-play");
         $(".status-display").removeClass("ui-state-highlight").css("top", "");
+        $(".tool-tip").remove();
     }
     
     var places = [ "1st", "2nd", "3rd", "4th" ];
@@ -552,6 +570,8 @@
         $(".change-icon").live("click", function(e) {
             e.preventDefault();
             
+            $(".tool-tip").remove();
+
             if(timer) { clearTimeout(timer); }
             timer = setTimeout(sendIconUpdate, 500);
             
@@ -574,8 +594,9 @@
             dataType: "json"
         });
         $(".for-teachers-dialog").dialog("close");
-        alert("Thank you for sending some feedback!");
+        alert("Thank you for sending feedback!");
     }).find("[type=submit]").button();
+
     var _gaq = _gaq || [];
     _gaq.push(['_setAccount', 'UA-28551236-1']);
     _gaq.push(['_trackPageview']);

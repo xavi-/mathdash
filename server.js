@@ -62,9 +62,11 @@ var route = bee.route({
     "/ /index.html": function(req, res) {
         var cookies = new Cookies(req, res);
         var userId = cookies.get("user-id");
+        var isNewUser = false;
         
         userdb.get(userId, function(err, result) {
             if(err) { // Unknown user
+                isNewUser = true;
                 userId = uuid(); result = { "_id": userId, "name": cookies.get("user-name"), created: new Date() };
                 userdb.save(result, function(err, result) { if(err) { return console.error(err); } });
             }
@@ -84,7 +86,8 @@ var route = bee.route({
                     "total-score": TOTAL_SCORE,
                     "user-name": result.name,
                     "user-icon": result.icon || "blue",
-                    "logged-in?": !!result.email
+                    "logged-in?": !!result.email,
+                    "is-new-user?": isNewUser
                 },
                 function(data) {
                     res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
@@ -449,12 +452,12 @@ function Questions(user) {
     var curQuestion = "", curAnswer = "";
     
     var generate = function(curQuestion, curAnswer) {
-        if(user.rank >= 36) { return grade7(); }
-        else if(user.rank >= 30) { return grade6(); }
-        else if(user.rank >= 24) { return grade5(); }
-        else if(user.rank >= 18) { return grade4(); }
-        else if(user.rank >= 12) { return grade3(); }
-        else if(user.rank >= 6) { return grade2(); }
+        if(user.rank >= 72) { return grade7(); }
+        else if(user.rank >= 60) { return grade6(); }
+        else if(user.rank >= 48) { return grade5(); }
+        else if(user.rank >= 36) { return grade4(); }
+        else if(user.rank >= 24) { return grade3(); }
+        else if(user.rank >= 12) { return grade2(); }
         else { return grade1(); }
     };
     
