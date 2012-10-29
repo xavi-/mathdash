@@ -2,6 +2,8 @@
 <html>
 <head>
     <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/themes/excite-bike/jquery-ui.css" type="text/css" media="screen" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="viewport" content="initial-scale=1.0; minimum-scale=1.0; maximum-scale=1.0; width=device-width; user-scalable=no;"/>
     <link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" />
     <title>MathDash</title>
     <style>
@@ -254,9 +256,14 @@
     <label>Name: <input id="name-input" type=text/></label>
     <span class="error-text">Please enter your name.</span>
 </div>
-<div class="for-teachers-dialog" title="How can I make this better?">
+<div class="for-teachers-dialog" title="For Teachers">
     <form method="post" action="/teacher-feedback">
-        <label>How can I make this game better for teachers and students?<br/><textarea name="feedback"></textarea></label>
+        <label>
+            Have a suggestion?<br/>
+            Would you like to set up privated race for your students?<br/>
+            <strong>Please let me know!</strong><br/>
+            <textarea name="feedback"></textarea>
+        </label>
         <label>Email:<br/><input type="email" name="email"/></label>
         <input type="submit" value="Submit"/>
     </form>
@@ -582,7 +589,7 @@
     $(".for-teachers-link").click(function(e) {
         e.preventDefault();
 
-        $(".for-teachers-dialog").dialog();
+        $(".for-teachers-dialog").dialog({ width: 400, modal: true });
     });
     $(".for-teachers-dialog form").submit(function(e) {
         e.preventDefault();
