@@ -1,7 +1,7 @@
 [
 	{
 		"id": "AI0",
-		"name": "James",
+		"name": "Jim",
 		"rank": 0,
 		"icon": "green"
 	},
@@ -19,13 +19,13 @@
 	},
 	{
 		"id": "AI3",
-		"name": "Michael",
+		"name": "Mike",
 		"rank": 0,
 		"icon": "red"
 	},
 	{
 		"id": "AI4",
-		"name": "William",
+		"name": "Billy",
 		"rank": 0,
 		"icon": "green"
 	},
@@ -37,25 +37,25 @@
 	},
 	{
 		"id": "AI6",
-		"name": "Richard",
+		"name": "Rick",
 		"rank": 0,
 		"icon": "blue"
 	},
 	{
 		"id": "AI7",
-		"name": "Charles",
+		"name": "Charlie",
 		"rank": 0,
 		"icon": "green"
 	},
 	{
 		"id": "AI8",
-		"name": "Joseph",
+		"name": "Jose",
 		"rank": 0,
 		"icon": "red"
 	},
 	{
 		"id": "AI9",
-		"name": "Thomas",
+		"name": "Tom",
 		"rank": 0,
 		"icon": "red"
 	},
@@ -85,7 +85,7 @@
 	},
 	{
 		"id": "AI14",
-		"name": "Elizabeth",
+		"name": "Liz",
 		"rank": 0,
 		"icon": "red"
 	},
@@ -115,7 +115,7 @@
 	},
 	{
 		"id": "AI19",
-		"name": "Dorothy",
+		"name": "Ashley",
 		"rank": 0,
 		"icon": "red"
 	}
