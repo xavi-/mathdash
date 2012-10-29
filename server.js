@@ -992,7 +992,7 @@ server.listen(8007);
 console.log("Listening on port 8007");
 
 process.title = "node-mathdash";
-(settings.environment === "prod") && process.on("uncaughtException", function (err) {
+process.on("uncaughtException", function (err) {
     console.log(Date() + ' -- Caught exception: ' + err);
 });
 
