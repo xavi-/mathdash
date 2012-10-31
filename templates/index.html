@@ -269,8 +269,8 @@
     </form>
 </div>
 <script type="text/javascript" src="http://ajax.cdnjs.com/ajax/libs/json2/20110223/json2.js" defer async></script>
-<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.23/jquery-ui.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
     var userId = "(: user-id :)", total = "(: total-score :)";
@@ -447,7 +447,7 @@
             startingScreen();
         }
         if("game-started" in data) {
-            $("#answer").removeAttr("disabled").focus();
+            $("#answer").prop("disabled", false).focus();
             playScreen();
         }
         if("new-question" in data) {
@@ -475,13 +475,13 @@
         }
         if("game-left" in data) {
             $("#problem").text("?? + ??");
-            $("#answer").attr("disabled", "true");
+            $("#answer").prop("disabled", true);
             cars.reset();
             joinScreen();
         }
         if("game-ended" in data) {
             $("#problem").text("?? + ??");
-            $("#answer").attr("disabled", "true");
+            $("#answer").prop("disabled", true);
             endScreen(data["game-ended"].ranks);
             autoPlayTimer = setTimeout(function() {
                 $(".play-again-button").click();
@@ -490,7 +490,7 @@
         }
         if("finished-game" in data) {
             $("#problem").text("?? + ??");
-            $("#answer").attr("disabled", "true");
+            $("#answer").prop("disabled", true);
             
             var info = data["finished-game"];
             cars.finished(userId, info.rank);
