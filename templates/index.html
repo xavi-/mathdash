@@ -61,12 +61,14 @@
         .tutorial-message .join-button { display: inline-block; }
 
         .lessons-completed .tutorial-progress-buttons,
+        .lessons-completed .post-email-submit,
         .lessons-completed .example-problem { display: none; }
 
         .lessons-completed .completed-screen { display: block; }
         .lessons-completed .tutorial-restart-buttons { display: inline; }
 
-        .lessons-completed form { text-align: center; margin-bottom: 1em; }
+        .lessons-completed .completed-screen { margin-bottom: 1em; }
+        .lessons-completed form { text-align: center; }
         .lessons-completed form input { font-family: segoe ui, Arial, sans-serif; font-size: 1em; }
         .lessons-completed form .ui-button { font-size: .8em; }
 
@@ -292,11 +294,14 @@
                 </ol>
                 <div class="completed-screen" data-title="Congratulations!">
                     <p>You've completed all the lessons currently created.</p>
-                    <p>Enter in your email if you want to be notified when new lessons are added:</p>
-                    <form method="post" action="/new-lessons-notification" data-ack-text="Thank you!">
-                        <label>Email: <input type="email" name="email" required autofocus/></label>
-                        <input type="submit" value="Submit"/>
-                    </form>
+                    <div class="pre-email-submit">
+                        <p>Enter in your email if you want to be notified when new lessons are added:</p>
+                        <form method="post" action="/new-lessons-notification" data-ack-text="Thank you!">
+                            <label>Email: <input type="email" name="email" required autofocus/></label>
+                            <input type="submit" value="Submit"/>
+                        </form>
+                    </div>
+                    <p class="post-email-submit">We'll let you know when ever new lessons come out. For now would you like to review the past lessons or join a game?</p>
                 </div>
                 <div class="tutorial-buttons">
                     <span class="tutorial-restart-buttons"><a class="go-over-lessons-again-button">Review Lessons Again</a> or </span>
@@ -747,6 +752,11 @@
         $this.closest(":ui-dialog").dialog("close");
         alert($this.data("ack-text"));
     }).find("[type=submit]").button();
+
+    $(".completed-screen form").submit(function() {
+        $(".pre-email-submit").hide();
+        $(".post-email-submit").show();
+    });
 
     var _gaq = _gaq || [];
     _gaq.push(['_setAccount', 'UA-28551236-1']);
