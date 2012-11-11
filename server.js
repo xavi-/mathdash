@@ -49,11 +49,14 @@ var route = bee.route({
         var fd = fs.createWriteStream("./feedback.txt", { flags: "a+" });
 
         return function(req, res) {
+            var cookies = new Cookies(req, res);
+            var userId = cookies.get("user-id");
+
             var data = "";
             req.on("data", function(chunk) { data += chunk; });
             req.on("end", function() {
                 var form = query.parse(data);
-                var content = "\n\n--------\nfeedback: " + form.feedback + "\nemail: " + form.email + "\n";
+                var content = "\n--------\nfeedback: " + form.feedback + "\nemail: " + form.email + "; user-id: " + userId + "\n";
                 fd.write(content);
                 res.json({ error: false });
             });
@@ -63,11 +66,14 @@ var route = bee.route({
         var fd = fs.createWriteStream("./new-lessons-notifications.txt", { flags: "a+" });
 
         return function(req, res) {
+            var cookies = new Cookies(req, res);
+            var userId = cookies.get("user-id");
+
             var data = "";
             req.on("data", function(chunk) { data += chunk; });
             req.on("end", function() {
                 var form = query.parse(data);
-                fd.write(form.email + "\n");
+                fd.write("email: " + form.email + "; user-id: " + userId + "\n");
                 res.json({ error: false });
             });
         };
