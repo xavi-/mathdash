@@ -19,15 +19,17 @@
         
         #main .ui-state-highlight .ui-button-text { color: white; }
         
-        .join-button, .start-button, .leave-button, .play-again-button, .no-play-again-button,
-        .disconnect-message, .connect-message, .wait-message, 
+        .tutorial-button-holder, .join-button, .start-button, .leave-button, .play-again-button, .no-play-again-button,
+        .disconnect-message, .connect-message, .wait-message, .tutorial-message,
         .starting-message, .join-message, .finish-message, .end-message
         { display: none; }
         
         .finish-message, .end-message, .wait-message { margin: .3em 0 .2em 0; font-size: 1.2em; }
         
         .join-message { text-align: left; }
+        .join-message p { text-align: center; font-size: 1.2em; padding: 0 1em; }
         
+        .md-state-tutorial .status-display,
         .md-state-disconnect .status-display,
         .md-state-connect .status-display,
         .md-state-join .status-display {
@@ -37,14 +39,36 @@
             left: 50%;
             margin-left: -200px;
             text-align: center;
-            height: 300px;
+            min-height: 300px;
             width: 400px;
             behavior: url(/libraries/pie.htc);
         }
         .md-state-disconnect .disconnect-message { display: block; }
         .md-state-connect .connect-message { display: block; }
         .md-state-join .join-message { display: block; }
-        .md-state-join .join-button { display: inline-block; }
+        .md-state-join .join-button, .md-state-join .tutorial-button-holder { display: inline-block; }
+
+        .md-state-tutorial .status-display { width: 520px; margin-left: -260px; }
+        .md-state-tutorial .tutorial-message { display: block; text-align: left; margin: .5em 1em; }
+        .tutorial-message h3 { margin: .5em 0; text-align: center; font-size: 1.3em; }
+        .tutorial-message em { color: red; font-style: normal; }
+        .tutorial-message .example-problem { text-align: center; font-size: 1.7em; }
+        .tutorial-message .tutorial-buttons { text-align: center; font-size: .9em; }
+        .tutorial-message .tutorial-restart-buttons,
+        .tutorial-message .lesson,
+        .tutorial-message .completed-screen { display: none; }
+        .tutorial-message .current-lesson { display: block; margin: .1em 0 .7em 0;}
+        .tutorial-message .join-button { display: inline-block; }
+
+        .lessons-completed .tutorial-progress-buttons,
+        .lessons-completed .example-problem { display: none; }
+
+        .lessons-completed .completed-screen { display: block; }
+        .lessons-completed .tutorial-restart-buttons { display: inline; }
+
+        .lessons-completed form { text-align: center; margin-bottom: 1em; }
+        .lessons-completed form .ui-button { font-size: .8em; }
+
         
         .md-state-wait .status-display,
         .md-state-starting .status-display,
@@ -160,7 +184,7 @@
         
         .answer-correct { background: green; }
         .answer-incorrect { background: red; }
-        
+
         #answer::-webkit-outer-spin-button,
         #answer::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -178,6 +202,8 @@
         .for-teachers-dialog label { display: block; }
         .for-teachers-dialog label input, .for-teachers-dialog textarea { width: 100%; }
         .for-teachers-dialog textarea { height: 150px; }
+
+        .ui-button { margin: 0; }
     </style>
 </head>
 <body>
@@ -225,9 +251,11 @@
             </div>
             <div class="join-message">
                 <ul>
+                    <li>Learn math tricks</li>
                     <li>Have fun with math</li>
                     <li>Become a mental math pro</li>
                 </ul>
+                <p>Would like join a game or learn a math trick?</p>
             </div>
             <div class="finish-message">
                 You've finshed the race.  You got <span class="rank"></span> place.
@@ -235,6 +263,47 @@
             <div class="end-message">
                 Game over.  You got <span class="rank"></span> place. New game in <span class="new-game-count-down"></span>...
             </div>
+            <div class="tutorial-message">
+                <h3></h3>
+                <div class="example-problem">
+                    <span class="example-question"></span> = <span class="example-answer"></span>
+                </div>
+                <ol class="lesson" data-name="times-50" data-title="Multiply any number by 50">
+                    <li data-temp-answer="0">First divide <span class="example-number"></span> by 2.  Remeber the whole part.<br/>(ex: <span class="sub-result-1"></span>)</li>
+                    <li data-temp-answer="1">Take the whole part and multiply it by 100.<br/>(ex: <span class="sub-result-2"></span>)</li>
+                    <li>Take the remainder and multiply it by 50.<br/>(ex: <span class="sub-result-3"></span>)</li>
+                    <li data-temp-answer="2">Add the two numbers together.<br/>(ex: <span class="sub-result-4"></span>)</li>
+                    <li>You're done!</li>
+                </ol>
+                <ol class="lesson" data-name="times-25" data-title="Multiply any number by 25">
+                    <li data-temp-answer="0">First divide <span class="example-number"></span> by 4.  Remeber the whole part.<br/>(ex: <span class="sub-result-1"></span>)  </li>
+                    <li data-temp-answer="1">Take the whole part and multiply it by 100.<br/>(ex: <span class="sub-result-2"></span>)</li>
+                    <li>Take the remainder and multiply it by 25.<br/>(ex: <span class="sub-result-3"></span>)</li>
+                    <li data-temp-answer="2">Add the two numbers together.<br/>(ex: <span class="sub-result-4"></span>)</li>
+                    <li>You're done!</li>
+                </ol>
+                <ol class="lesson" data-name="times-11" data-title="Multiply a two digit number by 11">
+                    <li data-temp-answer="0">First write down the ones digit. (ex: <span class="sub-result-1"></span>)</li>
+                    <li data-temp-answer="1">Next add the tens digit and ones digit together.<br/>(ex: <span class="sub-result-2"></span>)</li>
+                    <li data-temp-answer="2">Write down the ones digit of the result. (ex: <span class="sub-result-3"></span>)</li>
+                    <li data-temp-answer="3">Take the tens digit of the result (ex: <span class="sub-result-6"></span>) and add it to the tens digit of the number (ex: <span class="sub-result-5"></span>) you're multiplying and write it down. (ex: <span class="sub-result-4"></span>)</li>
+                    <li>You're done!</li>
+                </ol>
+                <div class="completed-screen" data-title="Congratulations!">
+                    <p>You've completed all the lessons currently created.</p>
+                    <p>Enter in your email if you want to be notified when new lessons are added:</p>
+                    <form method="post" action="/new-lessons-notification" data-ack-text="Thank you!">
+                        <label>Email: <input type="email" name="email"/></label>
+                        <input type="submit" value="Submit"/>
+                    </form>
+                </div>
+                <div class="tutorial-buttons">
+                    <span class="tutorial-restart-buttons"><a class="go-over-lessons-again-button">Review Lessons Again</a> or </span>
+                    <span class="tutorial-progress-buttons"><a class="another-example-button">Another Example</a> or <a class="next-tutorial-button">Next Lesson</a> or </span>
+                    <a class="join-button" href="#">Join Game</a>
+                </div>
+            </div>
+            <span class="tutorial-button-holder"><a class="tutorial-button" href="#">Learn a Trick</a> or</span>
             <a class="join-button" href="#">Join Game</a>
             <a class="start-button" href="#">Start Game</a>
             <a class="leave-button" href="#">Leave Game</a>
@@ -248,7 +317,7 @@
     <span class="error-text">Please enter your name.</span>
 </div>
 <div class="for-teachers-dialog" title="For Teachers">
-    <form method="post" action="/teacher-feedback">
+    <form method="post" action="/teacher-feedback" data-ack-text="Thank you for sending feedback!">
         <label>
             Have a suggestion?<br/>
             Would you like to create a privated race for your students?<br/>
@@ -266,6 +335,7 @@
 <script>
     var userId = "(: user-id :)", total = "(: total-score :)";
     var userName = "(: user-name :)", userIcon = "(: user-icon :)";
+    var lessonsSeen = {};
     
     function showToolTip() {
         if($(".tool-tip").length > 0) { return; }
@@ -282,7 +352,7 @@
     }
 
     var states =
-        "md-state-disconnect md-state-connect md-state-join md-state-wait md-state-starting md-state-play md-state-finish md-state-end";
+        "md-state-disconnect md-state-connect md-state-join md-state-wait md-state-starting md-state-play md-state-finish md-state-end md-state-tutorial";
     function disconnectScreen() {
         $("#game-container").removeClass(states).addClass("md-state-disconnect");
         $(".status-display").addClass("ui-state-highlight ui-corner-bottom").css("top", "");
@@ -333,7 +403,67 @@
             .css("top", $("#problem-container").position().top)
             .find(".end-message .rank").text(places[ranks[userId]]).data("rank", ranks[userId]);
     }
+
+    function autoProgressTutorial($tutorial, data) {
+        var $curLine = $(".current-lesson li:hidden:first", $tutorial).show();
+
+        if($curLine.data("temp-answer") != null) {
+            $(".example-answer", $tutorial).html(data.tutorial["temp-answers"][$curLine.data("temp-answer")]);
+        }
+
+        if($curLine.next("li:hidden").length > 0) {
+            $tutorial.data(
+                "progress-timer",
+                setTimeout(function() { autoProgressTutorial($tutorial, data); }, 3000)
+            );
+        }
+    }
     
+    function tutorialScreen() {
+        $("#game-container").removeClass(states).addClass("md-state-tutorial");
+
+        var $tutorial = $(".tutorial-message");
+        $tutorial.removeClass("lessons-completed");
+        clearTimeout($tutorial.data("progress-timer"));
+
+        $(".current-lesson", $tutorial).removeClass("current-lesson");
+
+        var $lesson = $(".lesson", $tutorial)
+            .filter(function() { return !lessonsSeen[$(this).data("name")]; })
+            .first()
+        ;
+
+        $("h3", $tutorial).text($lesson.data("title") || $tutorial.data("title"));
+
+        if($lesson.length <= 0) { return $tutorial.addClass("lessons-completed"); }
+
+        $.ajax({
+            url: "/tutorial-example",
+            data: { name: $lesson.data("name") },
+            success: function(data) {
+                $tutorial
+                    .find(".example-question").text(data["question"]).end()
+                    .find(".example-answer").text(data["answer"])
+                ;
+
+                var subResults = data.tutorial["sub-results"];
+                for(var i = 0; i < subResults.length; i++) {
+                    $(".sub-result-" + (i + 1), $tutorial).html(subResults[i]);
+                }
+
+                autoProgressTutorial($tutorial, data);
+            },
+            error: function() { },
+            dataType: "json"
+        });
+
+        $(".example-question", $tutorial).text("?? * ??");
+        $(".example-answer", $tutorial).text("??");
+        $lesson
+            .addClass("current-lesson")
+            .find("li").hide();
+    }
+
     function showStartingCountDown(time, elem) {
         $(elem).text(Math.round(time / 1000));
         
@@ -548,6 +678,28 @@
         e.preventDefault();
         socket.json.send({ "leave-game": true });
     });
+
+    $(".tutorial-button").click(function(e) {
+        e.preventDefault();
+        tutorialScreen();
+    });
+
+    $(".next-tutorial-button").click(function(e) {
+        e.preventDefault();
+        lessonsSeen[$(".tutorial-message .current-lesson").data("name")] = true;
+        tutorialScreen();
+    });
+
+    $(".another-example-button").click(function(e) {
+        e.preventDefault();
+        tutorialScreen();
+    });
+
+    $(".go-over-lessons-again-button").click(function(e) {
+        e.preventDefault();
+        lessonsSeen = {};
+        tutorialScreen();
+    });
     
     $("#answer").keypress(function(e) {
         if(e.which !== $.ui.keyCode.ENTER) { return; }
@@ -582,7 +734,7 @@
 
         $(".for-teachers-dialog").dialog({ width: 400, modal: true });
     });
-    $(".for-teachers-dialog form").submit(function(e) {
+    $(".for-teachers-dialog form, .completed-screen form").submit(function(e) {
         e.preventDefault();
         var $this = $(this);
         $.ajax({
@@ -591,8 +743,8 @@
             data: $this.serialize(),
             dataType: "json"
         });
-        $(".for-teachers-dialog").dialog("close");
-        alert("Thank you for sending feedback!");
+        $this.closest(":ui-dialog").dialog("close");
+        alert($this.data("ack-text"));
     }).find("[type=submit]").button();
 
     var _gaq = _gaq || [];

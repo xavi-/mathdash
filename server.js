@@ -59,6 +59,12 @@ var route = bee.route({
             });
         };
     })(),
+    "/tutorial-example": function(req, res) {
+        var uri  = url.parse(req.url, true);
+        var times50 = require("./problem-generators/" + uri.query["name"]);
+
+        res.json(times50({ tutorial: true }));
+    },
     "/ /index.html": function(req, res) {
         var cookies = new Cookies(req, res);
         var userId = cookies.get("user-id");
