@@ -59,12 +59,22 @@ var route = bee.route({
             });
         };
     })(),
-    "/tutorial-example": function(req, res) {
-        var uri  = url.parse(req.url, true);
-        var times50 = require("./problem-generators/" + uri.query["name"]);
+    "/tutorial-example": (function() {
+        var tutorials = {
+            "times-50": require("./problem-generators/times-50"),
+            "times-25": require("./problem-generators/times-25"),
+            "times-11": require("./problem-generators/times-11")
+        };
 
-        res.json(times50({ tutorial: true }));
-    },
+        return function(req, res) {
+            var uri  = url.parse(req.url, true);
+            var tutorial = tutorials[uri.query["name"]];
+
+            if(!tutorial) { return res.json({ error: "unknown-tutorial" }); }
+
+            res.json(tutorial({ tutorial: true }));
+        };
+    })(),
     "/ /index.html": function(req, res) {
         var cookies = new Cookies(req, res);
         var userId = cookies.get("user-id");
