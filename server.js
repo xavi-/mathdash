@@ -59,6 +59,19 @@ var route = bee.route({
             });
         };
     })(),
+    "/new-lessons-notification": (function() {
+        var fd = fs.createWriteStream("./new-lessons-notifications.txt", { flags: "a+" });
+
+        return function(req, res) {
+            var data = "";
+            req.on("data", function(chunk) { data += chunk; });
+            req.on("end", function() {
+                var form = query.parse(data);
+                fd.write(form.email + "\n");
+                res.json({ error: false });
+            });
+        };
+    })(),
     "/tutorial-example": (function() {
         var tutorials = {
             "times-50": require("./problem-generators/times-50"),
