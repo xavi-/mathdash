@@ -433,7 +433,7 @@
             .first()
         ;
 
-        $("h3", $tutorial).text($lesson.data("title") || $tutorial.data("title"));
+        $("h3", $tutorial).text($lesson.data("title") || $(".completed-screen", $tutorial).data("title"));
 
         if($lesson.length <= 0) { return $tutorial.addClass("lessons-completed"); }
 
