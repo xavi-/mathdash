@@ -339,7 +339,7 @@
 <script>
     var userId = "(: user-id :)", total = "(: total-score :)";
     var userName = "(: user-name :)", userIcon = "(: user-icon :)";
-    var lessonsSeen = (: lessons-seen :);
+    var lessonsSeen = (: lessons-seen :), needEmail = (: email-for-notifications? :);
     
     function showToolTip() {
         if($(".tool-tip").length > 0) { return; }
@@ -439,7 +439,12 @@
 
         $("h3", $tutorial).text($lesson.data("title") || $(".completed-screen", $tutorial).data("title"));
 
-        if($lesson.length <= 0) { return $tutorial.addClass("lessons-completed"); }
+        if($lesson.length <= 0) {
+            $tutorial.addClass("lessons-completed");
+            $(".pre-email-submit").toggle(!needEmail);
+            $(".post-email-submit").toggle(needEmail);
+            return;
+        }
 
         $.ajax({
             url: "/tutorial-example",
