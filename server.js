@@ -59,6 +59,8 @@ var route = bee.route({
                 var content = "\n--------\nfeedback: " + form.feedback + "\nemail: " + form.email + "; user-id: " + userId + "\n";
                 fd.write(content);
                 res.json({ error: false });
+
+                saveEmail(userId, form.email, "feedback");
             });
         };
     })(),
@@ -75,6 +77,8 @@ var route = bee.route({
                 var form = query.parse(data);
                 fd.write("email: " + form.email + "; user-id: " + userId + "\n");
                 res.json({ error: false });
+
+                saveEmail(userId, form.email, "notification");
             });
         };
     })(),
@@ -334,6 +338,18 @@ var route = bee.route({
         })()
     }
 });
+
+function saveEmail(userId, email, source) {
+    var fields = {};
+    fields["email-" + source] = email;
+
+    userdb.request(
+        "PUT",
+        "/users/_design/users/_update/setfield/" + userId + "?"
+            + query.stringify({ "fields": JSON.stringify(fields) }),
+        function(err, result) { if(err) { return console.error(err); } }
+    );
+}
 
 var server = http.createServer(route);
 
