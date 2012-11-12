@@ -111,6 +111,7 @@ var route = bee.route({
             users[userId].name = result.name;
             users[userId].icon = result.icon || "blue";
             users[userId].rank = result.rank || 0;
+            users[userId]["lessons-seen"] = result["lessons-seen"] || {};
             
             cookies.set("user-id", userId, { expires: new Date(2050, 11, 31) });
             cookies.set("user-name", result.name, { expires: new Date(2050, 11, 31) });
@@ -122,7 +123,8 @@ var route = bee.route({
                     "user-name": result.name,
                     "user-icon": result.icon || "blue",
                     "logged-in?": !!result.email,
-                    "is-new-user?": isNewUser
+                    "is-new-user?": isNewUser,
+                    "lessons-seen": JSON.stringify(users[userId]["lessons-seen"])
                 },
                 function(data) {
                     res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
@@ -984,6 +986,15 @@ io.sockets.on('connection', function(client){
                 function(err, result) { if(err) { return console.error(err); } }
             );
             curGame.emit("player-icon-changed", curGame.getPlayer(userId), users[userId].icon);
+        }
+        if("lessons-seen" in data) {
+            users[userId]["lessons-seen"] = data["lessons-seen"];
+            userdb.request(
+                "PUT",
+                "/users/_design/users/_update/setfield/" + userId + "?"
+                    + query.stringify({ "fields": JSON.stringify({ "lessons-seen": users[userId]["lessons-seen"] }) }),
+                function(err, result) { if(err) { return console.error(err); } }
+            );
         }
         if("join-game" in data) {
             if(curGame) { curGame.removePlayer(userId); }

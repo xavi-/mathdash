@@ -339,7 +339,7 @@
 <script>
     var userId = "(: user-id :)", total = "(: total-score :)";
     var userName = "(: user-name :)", userIcon = "(: user-icon :)";
-    var lessonsSeen = {};
+    var lessonsSeen = (: lessons-seen :);
     
     function showToolTip() {
         if($(".tool-tip").length > 0) { return; }
@@ -688,21 +688,25 @@
         tutorialScreen();
     });
 
+    $(".another-example-button").click(function(e) {
+        e.preventDefault();
+        tutorialScreen();
+    });
+
     $(".next-tutorial-button").click(function(e) {
         e.preventDefault();
         lessonsSeen[$(".tutorial-message .current-lesson").data("name")] = true;
         tutorialScreen();
-    });
 
-    $(".another-example-button").click(function(e) {
-        e.preventDefault();
-        tutorialScreen();
+        socket.json.send({ "lessons-seen": lessonsSeen });
     });
 
     $(".go-over-lessons-again-button").click(function(e) {
         e.preventDefault();
         lessonsSeen = {};
         tutorialScreen();
+
+        socket.json.send({ "lessons-seen": lessonsSeen });
     });
     
     $("#answer").keypress(function(e) {
