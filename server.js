@@ -561,7 +561,7 @@ setInterval(function() { // Game reaper, doesn't take care of all memory leaks
     var AIs = JSON.parse(fs.readFileSync("./static/ai-players.json"));
     AIs.forEach(function(ai) { users[ai.id] = ai; });
     
-    function randomAnswerTime() { return 2500 + (Math.random() * 2000 - 1000); }
+    function randomAnswerTime() { return 3000 + (Math.random() * 2000 - 1000); }
     
     function addAIPlayer(game) {
         var id = "AI" + Math.floor(Math.random() * AI_COUNT);
