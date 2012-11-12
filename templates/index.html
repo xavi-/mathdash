@@ -710,8 +710,6 @@
         e.preventDefault();
         lessonsSeen = {};
         tutorialScreen();
-
-        socket.json.send({ "lessons-seen": lessonsSeen });
     });
     
     $("#answer").keypress(function(e) {

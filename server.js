@@ -20,6 +20,19 @@ var TOTAL_SCORE = 150, MAX_GAME_TIME = 5 * 60 * 1000, AI_COUNT = 20;
 var userdb = CouchClient("http://" + settings.couchdb.auth + "@127.0.0.1:5984/users");
 var gamedb = CouchClient("http://" + settings.couchdb.auth + "@127.0.0.1:5984/games");
 
+var generators = {
+    "times-50": require("./problem-generators/times-50"),
+    "times-25": require("./problem-generators/times-25"),
+    "times-11": require("./problem-generators/times-11"),
+    "grade7": require("./problem-generators/grade7"),
+    "grade6": require("./problem-generators/grade6"),
+    "grade5": require("./problem-generators/grade5"),
+    "grade4": require("./problem-generators/grade4"),
+    "grade3": require("./problem-generators/grade3"),
+    "grade2": require("./problem-generators/grade2"),
+    "grade1": require("./problem-generators/grade1")
+};
+
 var route = bee.route({
     "`preprocess`": [
         (function() {
@@ -82,22 +95,14 @@ var route = bee.route({
             });
         };
     })(),
-    "/tutorial-example": (function() {
-        var tutorials = {
-            "times-50": require("./problem-generators/times-50"),
-            "times-25": require("./problem-generators/times-25"),
-            "times-11": require("./problem-generators/times-11")
-        };
+    "/tutorial-example": function(req, res) {
+        var uri  = url.parse(req.url, true);
+        var tutorial = generators[uri.query["name"]];
 
-        return function(req, res) {
-            var uri  = url.parse(req.url, true);
-            var tutorial = tutorials[uri.query["name"]];
+        if(!tutorial) { return res.json({ error: "unknown-tutorial" }); }
 
-            if(!tutorial) { return res.json({ error: "unknown-tutorial" }); }
-
-            res.json(tutorial({ tutorial: true }));
-        };
-    })(),
+        res.json(tutorial({ tutorial: true }));
+    },
     "/ /index.html": function(req, res) {
         var cookies = new Cookies(req, res);
         var userId = cookies.get("user-id");
@@ -115,6 +120,7 @@ var route = bee.route({
             users[userId].name = result.name;
             users[userId].icon = result.icon || "blue";
             users[userId].rank = result.rank || 0;
+            users[userId]["lessons-seen"] = result["lessons-seen"] || {};
             
             cookies.set("user-id", userId, { expires: new Date(2050, 11, 31) });
             cookies.set("user-name", result.name, { expires: new Date(2050, 11, 31) });
@@ -127,7 +133,7 @@ var route = bee.route({
                     "user-icon": result.icon || "blue",
                     "logged-in?": !!result.email,
                     "is-new-user?": isNewUser,
-                    "lessons-seen": JSON.stringify(result["lessons-seen"] || {}),
+                    "lessons-seen": JSON.stringify(users[userId]["lessons-seen"]),
                     "email-for-notifications?": !!result["email-notification"] + ""
                 },
                 function(data) {
@@ -353,165 +359,43 @@ function saveEmail(userId, email, source) {
 
 var server = http.createServer(route);
 
-function grade1() {
-    if(Math.random() < .6) { // Addition
-        var num1 = Math.floor(10 * Math.random()), num2 = Math.floor(10 * Math.random());
-        return { question: num1 + " + " + num2, answer: num1 + num2 };
-    } else { // Subtracion
-        var num1 = Math.floor(10 * Math.random()), num2 = Math.floor(num1 * Math.random());
-        return { question: num1 + " - " + num2, answer: num1 - num2 };
-    }
-}
-function grade2() {
-    var rnd = Math.random();
-    if(rnd < .333) { // Addition
-        var num1 = Math.floor(15 * Math.random()), num2 = Math.floor(15 * Math.random());
-        return { question: num1 + " + " + num2, answer: num1 + num2 };
-    } else if(rnd < .666) { // Subtracion
-        var num1 = Math.floor(20 * Math.random()), num2 = Math.floor(num1 * Math.random());
-        return { question: num1 + " - " + num2, answer: num1 - num2 };
-    } else {
-        var num1 = Math.floor(6 * Math.random());
-        var num2 = Math.floor(4 * Math.random());
-        var num3 = Math.floor(6 * Math.random());
-        return { question: num1 + " + " + num2 + " + " + num3, answer: num1 + num2 + num3 };
-    }
-}
-
-function grade3() {
-    var rnd = Math.random();
-    if(rnd < .25) { // Addition
-        var num1 = Math.floor(20 * Math.random()), num2 = Math.floor(20 * Math.random());
-        return { question: num1 + " + " + num2, answer: num1 + num2 };
-    } else if(rnd < .5) { // Subtracion
-        var num1 = Math.floor(30 * Math.random()), num2 = Math.floor(num1 * Math.random());
-        return { question: num1 + " - " + num2, answer: num1 - num2 };
-    } else if(rnd < .8) { // Multiply
-        var num1 = Math.floor(8 * Math.random());
-        var num2 = Math.floor(8 * Math.random());
-        return { question: num1 + " * " + num2, answer: num1 * num2 };
-    } else { // 3 Add
-        var num1 = Math.floor(8 * Math.random());
-        var num2 = Math.floor(8 * Math.random());
-        var num3 = Math.floor(8 * Math.random());
-        return { question: num1 + " + " + num2 + " + " + num3, answer: num1 + num2 + num3 };
-    }
-}
-
-function grade4() {
-    var rnd = Math.random();
-    if(rnd < .15) { // Addition
-        var num1 = Math.floor(30 * Math.random()), num2 = Math.floor(30 * Math.random());
-        return { question: num1 + " + " + num2, answer: num1 + num2 };
-    } else if(rnd < .35) { // Subtracion
-        var num1 = Math.floor(40 * Math.random()), num2 = Math.floor(num1 * Math.random());
-        return { question: num1 + " - " + num2, answer: num1 - num2 };
-    } else if(rnd < .55) { // Multiply
-        var num1 = Math.floor(10 * Math.random()), num2 = Math.floor(10 * Math.random());
-        return { question: num1 + " * " + num2, answer: num1 * num2 };
-    } else if(rnd < .7) { // Multiply
-        var num1 = Math.floor(6 * Math.random()) + 4, num2 = Math.floor(8 * Math.random()) + 2;
-        return { question: num1 + " * " + num2, answer: num1 * num2 };
-    } else if(rnd < .85) {
-        var num1 = Math.floor(10 * Math.random());
-        var num2 = Math.floor(10 * Math.random());
-        var num3 = Math.floor(10 * Math.random());
-        return { question: num1 + " + " + num2 + " + " + num3, answer: num1 + num2 + num3 };
-    } else { // Divide
-        var num1 = Math.floor(9 * Math.random()) + 1, num2 = Math.floor(9 * Math.random()) + 1;
-        var ans = num1 * num2;
-        return { question: ans + " / " + num1, answer: num2 };
-    }
-}
-
-function grade5() {
-    var rnd = Math.random();
-    if(rnd < .15) { // Addition
-        var num1 = Math.floor(50 * Math.random()), num2 = Math.floor(50 * Math.random());
-        return { question: num1 + " + " + num2, answer: num1 + num2 };
-    } else if(rnd < .35) { // Subtracion
-        var num1 = Math.floor(60 * Math.random()), num2 = Math.floor(num1 * Math.random());
-        return { question: num1 + " - " + num2, answer: num1 - num2 };
-    } else if(rnd < .55) { // Multiply
-        var num1 = Math.floor(12 * Math.random()), num2 = Math.floor(12 * Math.random());
-        return { question: num1 + " * " + num2, answer: num1 * num2 };
-    } else if(rnd < .7) { // Multiply
-        var num1 = Math.floor(8 * Math.random()) + 4, num2 = Math.floor(10 * Math.random()) + 2;
-        return { question: num1 + " * " + num2, answer: num1 * num2 };
-    } else if(rnd < .85) {
-        var num1 = Math.floor(12 * Math.random());
-        var num2 = Math.floor(12 * Math.random());
-        var num3 = Math.floor(12 * Math.random());
-        return { question: num1 + " + " + num2 + " + " + num3, answer: num1 + num2 + num3 };
-    } else { // Divide
-        var num1 = Math.floor(11 * Math.random()) + 1, num2 = Math.floor(11 * Math.random()) + 1;
-        var ans = num1 * num2;
-        return { question: ans + " / " + num1, answer: num2 };
-    }
-}
-
-function grade6() {
-    var rnd = Math.random();
-    if(rnd < .10) { // Addition
-        var num1 = Math.floor(50 * Math.random()), num2 = Math.floor(50 * Math.random());
-        return { question: num1 + " + " + num2, answer: num1 + num2 };
-    } else if(rnd < .15) { // Subtracion
-        var num1 = Math.floor(60 * Math.random()), num2 = Math.floor(num1 * Math.random());
-        return { question: num1 + " - " + num2, answer: num1 - num2 };
-    } else if(rnd < .25) { // Multiply
-        var num1 = Math.floor(12 * Math.random()), num2 = Math.floor(12 * Math.random());
-        return { question: num1 + " * " + num2, answer: num1 * num2 };
-    } else if(rnd < .35) { // Divide
-        var num1 = Math.floor(11 * Math.random()) + 1, num2 = Math.floor(11 * Math.random()) + 1;
-        var ans = num1 * num2;
-        return { question: ans + " / " + num1, answer: num2 };
-    } else if(rnd < .45) { // 101 * any number
-        var num1 = Math.floor(90 * Math.random()) + 10;
-        return { question: "101 * " + num1, answer: num1 * 101 };
-    } else if(rnd < .65) { // 50 * any number
-        var num1 = Math.floor(90 * Math.random()) + 5;
-        return { question: "50 * " + num1, answer: num1 * 50 };
-    } else if(rnd < .85) { // 25 * any number
-        var num1 = Math.floor(90 * Math.random()) + 5;
-        return { question: "25 * " + num1, answer: num1 * 25 };
-    } else { // 11 * any number
-        var num1 = Math.floor(90 * Math.random()) + 5;
-        return { question: "11 * " + num1, answer: num1 * 11 };
-    }
-}
-
-function grade7() {
-    var rnd = Math.random();
-    if(rnd < .06) { // Ones place add to 10, same tens place
-        var tens = Math.floor(10 * Math.random()), ones = Math.floor(10 * Math.random());
-        var num1 = tens * 10 + ones, num2 = tens * 10 + (10 - ones);
-        return { question: num1 + " * " + num2, answer: num1 * num2 };
-    } else if(rnd < .12) { // Two numbers near 100 (but less than)
-        var ones1 = Math.floor(10 * Math.random()), ones2 = Math.floor(10 * Math.random());
-        var num1 = 100 - ones1, num2 = 100 - ones2;
-        return { question: num1 + " * " + num2, answer: num1 * num2 };
-    } else if(rnd < .18) { // Two numbers near 100 (but less then)
-        var ones1 = Math.floor(10 * Math.random()), ones2 = Math.floor(10 * Math.random());
-        var num1 = 100 + ones1, num2 = 100 + ones2;
-        return { question: num1 + " * " + num2, answer: num1 * num2 };
-    } else {
-        return grade6();
-    }
-}
-
 function Questions(user) {
     event.EventEmitter.call(this);
     
     var curQuestion = "", curAnswer = "";
     
     var generate = function(curQuestion, curAnswer) {
-        if(user.rank >= 72) { return grade7(); }
-        else if(user.rank >= 60) { return grade6(); }
-        else if(user.rank >= 48) { return grade5(); }
-        else if(user.rank >= 36) { return grade4(); }
-        else if(user.rank >= 24) { return grade3(); }
-        else if(user.rank >= 12) { return grade2(); }
-        else { return grade1(); }
+        var question, frequency = [ "times-11", "times-25", "times-50", "general", "general", "general" ];
+
+        if(user.rank >= 72) { frequency.push("times-11"); }
+        if(user.rank >= 60) { frequency.push("times-11"); }
+        if(user.rank >= 48) { frequency.push("times-25"); }
+        if(user.rank >= 36) { frequency.push("times-25"); }
+        if(user.rank >= 24) { frequency.push("times-50"); }
+        if(user.rank >= 12) { frequency.push("times-50"); }
+        if(user.rank >= 0) { frequency.push("general"); }
+
+        do {
+            var pick = frequency[(frequency.length * Math.random()) >> 0];
+
+            if(pick === "general") {
+                if(user.rank >= 72) { question = generators["grade7"](); }
+                else if(user.rank >= 60) { question = generators["grade6"](); }
+                else if(user.rank >= 48) { question = generators["grade5"](); }
+                else if(user.rank >= 36) { question = generators["grade4"](); }
+                else if(user.rank >= 24) { question = generators["grade3"](); }
+                else if(user.rank >= 12) { question = generators["grade2"](); }
+                else { question = generators["grade1"](); }
+            } else if((user["lessons-seen"] || {})[pick]) {
+                question = generators[pick]();
+            } else {
+                frequency.splice(pick, 1);
+            }
+        } while(!question && frequency.length > 0);
+
+        if(frequency.length === 0) { throw "Failed to generate a question: " + user.rank; }
+
+        return question;
     };
     
     this.current = function() { return curQuestion; };
@@ -1056,6 +940,7 @@ console.log("Listening on port 8007");
 process.title = "node-mathdash";
 process.on("uncaughtException", function (err) {
     console.log(Date() + ' -- Caught exception: ' + err);
+    console.log("stack: " + err.stack);
 });
 
 net.createServer(function (socket) {
