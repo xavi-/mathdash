@@ -409,6 +409,9 @@
     }
 
     function autoProgressTutorial($tutorial, data) {
+        $tutorial.parent().unbind("click");
+        clearTimeout($tutorial.data("progress-timer"));
+
         var $curLine = $(".current-lesson li:hidden:first", $tutorial).show();
 
         if($curLine.data("temp-answer") != null) {
@@ -416,10 +419,18 @@
         }
 
         if($curLine.next("li:hidden").length > 0) {
-            $tutorial.data(
-                "progress-timer",
-                setTimeout(function() { autoProgressTutorial($tutorial, data); }, 3000)
-            );
+            $tutorial
+                .data(
+                    "progress-timer",
+                    setTimeout(function() { autoProgressTutorial($tutorial, data); }, 5000)
+                )
+                .parent().click(function(e) {
+                    if($(e.target).is(":ui-button")) { return; }
+
+                    e.preventDefault();
+                    autoProgressTutorial($tutorial, data);
+                })
+            ;
         }
     }
     
@@ -427,7 +438,7 @@
         $("#game-container").removeClass(states).addClass("md-state-tutorial");
 
         var $tutorial = $(".tutorial-message");
-        $tutorial.removeClass("lessons-completed");
+        $tutorial.removeClass("lessons-completed").parent().unbind("click");
         clearTimeout($tutorial.data("progress-timer"));
 
         $(".current-lesson", $tutorial).removeClass("current-lesson");
