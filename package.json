@@ -18,7 +18,8 @@
     "couch-client": "",
     "moment": "",
     "node-uuid": "",
-    "socket.io": ""
+    "socket.io": "",
+    "quip": ""
   },
   "devDependencies": {}
 }

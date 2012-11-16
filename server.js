@@ -9,6 +9,7 @@ var repl = require("repl");
 var event = require("events");
 var util = require("util");
 var bee = require("beeline");
+var quip = require("quip");
 var bind = require("bind");
 var Cookies = require("cookies");
 var uuid = require("node-uuid");
@@ -35,25 +36,7 @@ var generators = {
 
 var route = bee.route({
     "`preprocess`": [
-        (function() {
-            function sendHtml(data) {
-                this.writeHead(200, { "Content-Length": data.length,
-                                      "Content-Type": "text/html; charset=utf-8" });
-                this.end(data);
-            }
-            
-            function sendJson(json) {
-                var data = JSON.stringify(json);
-                this.writeHead(200, { "Content-Length": data.length,
-                                      "Content-Type": "application/json; charset=utf-8" });
-                this.end(data);
-            }
-            
-            return function(req, res) {
-                res.html = sendHtml;
-                res.json = sendJson;
-            };
-        })()
+        function(req, res) { quip.update(res); }
     ],
     "r`^/css/(.*)$`": bee.staticDir("./static/css", { ".css": "text/css" }),
     "r`^/cars/(.*)$`": bee.staticDir("./static/img/cars", { ".png": "image/png" }),
@@ -140,8 +123,9 @@ var route = bee.route({
                     "email-for-notifications?": !!result["email-notification"] + ""
                 },
                 function(data) {
-                    res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
-                    res.end(data);
+                    res.setHeader("Cache-Control", "no-cache, must-revalidate");
+                    res.setHeader("Pragma", "no-cache");
+                    res.html(data);
                 }
             );
         });
@@ -150,15 +134,11 @@ var route = bee.route({
         var cookies = new Cookies(req, res);
         cookies.set("user-id", uuid());
         cookies.set("user-name", "");
-        res.writeHead(302, { "Location": "/" });
-        res.end();
+        res.redirect("/");
     },
     "/login /signin": {
         "GET": function(req, res) {
-            bind.toFile("./templates/login.html", { errors: false }, function(data) {
-                res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
-                res.end(data);
-            });
+            bind.toFile("./templates/login.html", { errors: false }, function(data) { res.html(data); });
         },
         "POST": (function() {
             function findErrors(form, rows) {
@@ -223,26 +203,19 @@ var route = bee.route({
                     var errors = findErrors(form);
                     if(errors.count > 0) {
                         form.errors = errors;
-                        bind.toFile("./templates/login.html", form, function(data) {
-                            res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
-                            res.end(data);
-                        });
+                        bind.toFile("./templates/login.html", form, function(data) { res.html(data); });
                     } else {
                         userdb.view("/users/_design/users/_view/email", { key: form["email"] }, function(err, result) {
                             console.dir(result);
                             errors = findErrors(form, result.rows);
                             if(errors.count > 0) {
                                 form.errors = errors;
-                                bind.toFile("./templates/login.html", form, function(data) {
-                                    res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
-                                    res.end(data);
-                                });
+                                bind.toFile("./templates/login.html", form, function(data) { res.html(data); });
                             } else if("signin" in form) {
                                 var cookies = new Cookies(req, res);
                                 cookies.set("user-id", result.rows[0].id);
                                 cookies.set("user-name", result.rows[0].value.name);
-                                res.writeHead(302, { "Location": "/" });
-                                res.end();
+                                res.redirect("/");
                             } else if("signup" in form) {
                                 var data = { _id: uuid(), email: form.email, password: form.password };
                                 userdb.save(data, function(err, result) {
@@ -250,8 +223,7 @@ var route = bee.route({
                                     console.dir(result);
                                     var cookies = new Cookies(req, res);
                                     cookies.set("user-id", result._id);
-                                    res.writeHead(302, { "Location": "/" });
-                                    res.end();
+                                    res.redirect("/");
                                 });
                             }
                         });
@@ -285,10 +257,7 @@ var route = bee.route({
                     info.name = result.name;
                     info.email = result.email;
                     console.dir(info);
-                    bind.toFile("./templates/account.html", info, function(data) {
-                        res.writeHead(200, { "Content-Length": data.length, "Content-Type": "text/html" });
-                        res.end(data);
-                    });
+                    bind.toFile("./templates/account.html", info, function(data) { res.html(data); });
                 });
             });
         },
