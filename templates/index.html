@@ -425,7 +425,7 @@
                     setTimeout(function() { autoProgressTutorial($tutorial, data); }, 3000)
                 )
                 .parent().click(function(e) {
-                    if($(e.target).is(":ui-button")) { return; }
+                    if($(e.target).closest(":ui-button").length > 0) { return; }
 
                     e.preventDefault();
                     autoProgressTutorial($tutorial, data);
