@@ -99,6 +99,9 @@ var route = bee.route({
         var uri  = url.parse(req.url, true);
         var tutorial = generators[uri.query["name"]];
 
+        res.setHeader("Cache-Control", "no-cache, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+
         if(!tutorial) { return res.json({ error: "unknown-tutorial" }); }
 
         res.json(tutorial({ tutorial: true }));
