@@ -816,11 +816,42 @@ function reconnectLogic(userId, client, msg) {
 
 var io = require("socket.io").listen(server);
 io.sockets.on('connection', function(client){
-    var curGame, userId;
+    var curGame, userId, timestamps = [];
+
+    function addTimestamp() {
+        timestamps.push(Date.now());
+
+        if(timestamps.length > 11) { timestamps.shift(); }
+    }
+    function isCheater() { // is Cheater if more than 10 messages in a 1 seconds
+        if(timestamps.length < 10) { return false; }
+
+        return (timestamps[timestamps.length - 1] - timestamps[0]) < 1000;
+    }
     
     console.log("A new client!!: sessionId: " + client.sessionId);
     
     client.on('message', function(data){
+        addTimestamp();
+        if(users[userId] && users[userId].isCheater) {
+            if((Date.now() - users[userId].isCheater) > 60 * 1000) { users[userId].isCheater = null; }
+            else { return; }
+        }
+        if(isCheater()) {
+            if(users[userId] && !users[userId].isCheater) {
+                users[userId].isCheater = new Date();
+                userdb.request(
+                    "PUT",
+                    "/users/_design/users/_update/setfield/" + userId + "?"
+                        + query.stringify({ "fields": JSON.stringify({ "is-cheater": users[userId].isCheater }) }),
+                    function(err, result) { if(err) { return console.error(err); } }
+                );
+                console.log("Cheater found: " + userId);
+            }
+
+            return;
+        }
+
         console.log("got message...: userId: " + userId + "; data: " + JSON.stringify(data));
         
         if("setup" in data) {
