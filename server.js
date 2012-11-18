@@ -344,21 +344,18 @@ function Questions(user) {
 
         if(user.rank < 24) { frequency.push("general"); }
 
-        do {
-            var pick = frequency[(frequency.length * Math.random()) >> 0];
-
-            if(pick === "general") {
-                if(user.rank >= 72) { question = generators["grade7"](); }
-                else if(user.rank >= 60) { question = generators["grade6"](); }
-                else if(user.rank >= 48) { question = generators["grade5"](); }
-                else if(user.rank >= 36) { question = generators["grade4"](); }
-                else if(user.rank >= 24) { question = generators["grade3"](); }
-                else if(user.rank >= 12) { question = generators["grade2"](); }
-                else { question = generators["grade1"](); }
-            } else {
-                question = generators[pick]();
-            }
-        } while(!question && frequency.length > 0);
+        var pick = frequency[(frequency.length * Math.random()) >> 0];
+        if(pick === "general") {
+            if(user.rank >= 72) { question = generators["grade7"](); }
+            else if(user.rank >= 60) { question = generators["grade6"](); }
+            else if(user.rank >= 48) { question = generators["grade5"](); }
+            else if(user.rank >= 36) { question = generators["grade4"](); }
+            else if(user.rank >= 24) { question = generators["grade3"](); }
+            else if(user.rank >= 12) { question = generators["grade2"](); }
+            else { question = generators["grade1"](); }
+        } else {
+            question = generators[pick]();
+        }
 
         if(frequency.length === 0) { throw "Failed to generate a question: " + user.rank; }
 
