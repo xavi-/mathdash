@@ -341,13 +341,7 @@ function Questions(user) {
     var generate = function(curQuestion, curAnswer) {
         var question, frequency = [ "times-11", "times-25", "times-50", "times-tables-basic", "times-tables-ten", "general" ];
 
-        if(user.rank >= 72) { frequency.push("times-11"); }
-        if(user.rank >= 60) { frequency.push("times-11"); }
-        if(user.rank >= 48) { frequency.push("times-25"); }
-        if(user.rank >= 36) { frequency.push("times-25"); }
-        if(user.rank >= 24) { frequency.push("times-50"); }
-        if(user.rank >= 12) { frequency.push("times-50"); }
-        if(user.rank >= 0) { frequency.push("general"); }
+        if(user.rank < 24) { frequency.push("general"); }
 
         do {
             var pick = frequency[(frequency.length * Math.random()) >> 0];
