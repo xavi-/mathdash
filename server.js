@@ -938,8 +938,10 @@ process.on("uncaughtException", function (err) {
     console.log("stack: " + err.stack);
 });
 
+fs.unlinkSync("/tmp/mathdash-repl-sock");
 net.createServer(function (socket) {
-    var r = repl.start("mathdash> ", socket);
+    var r = repl.start({ prompt: "mathdash> ", input: socket, output: socket });
+    r.on("exit", function() { socket.end(); });
     r.context.users = users;
     r.context.games = games;
     r.context.socket = socket;
