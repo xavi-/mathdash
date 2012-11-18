@@ -358,10 +358,8 @@ function Questions(user) {
                 else if(user.rank >= 24) { question = generators["grade3"](); }
                 else if(user.rank >= 12) { question = generators["grade2"](); }
                 else { question = generators["grade1"](); }
-            } else if((user["lessons-seen"] || {})[pick]) {
-                question = generators[pick]();
             } else {
-                frequency.splice(pick, 1);
+                question = generators[pick]();
             }
         } while(!question && frequency.length > 0);
 
