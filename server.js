@@ -31,7 +31,9 @@ var generators = {
     "grade4": require("./problem-generators/grade4"),
     "grade3": require("./problem-generators/grade3"),
     "grade2": require("./problem-generators/grade2"),
-    "grade1": require("./problem-generators/grade1")
+    "grade1": require("./problem-generators/grade1"),
+    "times-tables-basic": require("./problem-generators/times-tables-basic"),
+    "times-tables-ten": require("./problem-generators/times-tables-ten"),
 };
 
 var route = bee.route({
@@ -337,7 +339,7 @@ function Questions(user) {
     var curQuestion = "", curAnswer = "";
     
     var generate = function(curQuestion, curAnswer) {
-        var question, frequency = [ "times-11", "times-25", "times-50", "general", "general", "general" ];
+        var question, frequency = [ "times-11", "times-25", "times-50", "times-tables-basic", "times-tables-ten", "general" ];
 
         if(user.rank >= 72) { frequency.push("times-11"); }
         if(user.rank >= 60) { frequency.push("times-11"); }
