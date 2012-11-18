@@ -340,7 +340,7 @@ function Questions(user) {
     var curQuestion = "", curAnswer = "";
     
     var generate = function(curQuestion, curAnswer) {
-        var question, frequency = [ "times-11", "times-25", "times-50", "times-tables-basic", "times-tables-ten", "divide-basic", "general" ];
+        var question, frequency = [ "times-11", "times-11", "times-11", "times-25", "times-50", "times-tables-basic", "times-tables-ten", "divide-basic", "general" ];
 
         if(user.rank < 24) { frequency.push("general"); }
 
